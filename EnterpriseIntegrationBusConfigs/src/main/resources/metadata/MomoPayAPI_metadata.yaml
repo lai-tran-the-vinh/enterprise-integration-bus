@@ -1,0 +1,11 @@
+---
+key: "MomoPayAPI-1.0.0"
+name : "MomoPayAPI"
+displayName : "MomoPayAPI"
+description: "Sample API"
+version: "1.0.0"
+serviceUrl: "https://{MI_HOST}:{MI_PORT}/api/v1/payments/momo"
+definitionType: "OAS3"
+securityType: "BASIC"
+mutualSSLEnabled: false
+apiId : "null"

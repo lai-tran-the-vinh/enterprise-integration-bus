@@ -8,4 +8,13 @@
     <artifact name="DirectusOrderAPI_metadata" groupId="com.example.metadata" version="1.0.0" type="synapse/metadata" serverRole="EnterpriseServiceBus">
         <file>src/main/resources/metadata/DirectusOrderAPI_metadata.yaml</file>
     </artifact>
+    <artifact name="MomoPaymentAPI" groupId="com.example.api" version="1.0.0" type="synapse/api" serverRole="EnterpriseServiceBus">
+        <file>src/main/synapse-config/api/MomoPaymentAPI.xml</file>
+    </artifact>
+    <artifact name="MomoPayAPI_swagger" groupId="com.example.metadata" version="1.0.0" type="synapse/metadata" serverRole="EnterpriseServiceBus">
+        <file>src/main/resources/metadata/MomoPayAPI_swagger.yaml</file>
+    </artifact>
+    <artifact name="MomoPayAPI_metadata" groupId="com.example.metadata" version="1.0.0" type="synapse/metadata" serverRole="EnterpriseServiceBus">
+        <file>src/main/resources/metadata/MomoPayAPI_metadata.yaml</file>
+    </artifact>
 </artifacts>
