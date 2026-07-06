@@ -8,8 +8,10 @@
             <property name="partnerCode" scope="default" type="STRING" value="MOMO"/>
             <property name="accessKey" scope="default" type="STRING" value="F8BBA842ECF85"/>
             <property name="secretKey" scope="default" type="STRING" value="K951B6PE1waDMi640xX08PD3vg6EkVlz"/>
-            <property name="redirectUrl" scope="default" type="STRING" value="https://momo.vn/return"/>
-            <property name="ipnUrl" scope="default" type="STRING" value="http://localhost:8290/api/v1/webhook/momo"/>
+            <property expression="json-eval($.ipnUrl)" name="ipnUrl" scope="default" type="STRING"/>
+            <property expression="json-eval($.redirectUrl)" name="redirectUrl" scope="default" type="STRING"/>
+            <!-- <property name="redirectUrl" scope="default" type="STRING" value="https://momo.vn/return"/> 
+				<property name="ipnUrl" scope="default" type="STRING" value="http://localhost:8290/api/v1/webhook/momo"/> -->
             <property expression="fn:concat(get-property('partnerCode'), get-property('SYSTEM_TIME'))" name="requestId" scope="default" type="STRING"/>
             <script language="js"><![CDATA[var partnerCode = mc.getProperty("partnerCode");
                 var accessKey = mc.getProperty("accessKey");

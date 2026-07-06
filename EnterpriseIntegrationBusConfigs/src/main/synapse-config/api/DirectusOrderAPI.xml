@@ -2,6 +2,7 @@
 <api context="/api/v1/orders" name="DirectusOrderAPI" xmlns="http://ws.apache.org/ns/synapse">
     <resource methods="POST" uri-template="/">
         <inSequence>
+            <!-- 1. Lấy bảng giá sản phẩm từ Dolibarr -->
             <property expression="json-eval($.customer_name)" name="CustomerName" scope="default" type="STRING"/>
             <property expression="json-eval($.customer_email)" name="CustomerEmail" scope="default" type="STRING"/>
             <property expression="json-eval($.amount)" name="OrderAmount" scope="default" type="STRING"/>
@@ -35,13 +36,89 @@
                                     <progressionFactor>1</progressionFactor>
                                 </suspendOnFailure>
                                 <markForSuspension>
-                                    <retriesBeforeSuspension>0</retriesBeforeSuspension>
+                                    <retriesBeforeSuspension>5</retriesBeforeSuspension>
                                 </markForSuspension>
                             </http>
                         </endpoint>
                     </call>
                     <filter regex="true" source="json-eval($.active)">
                         <then>
+                            <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+                            <call>
+                                <endpoint>
+                                    <http method="get" uri-template="http://localhost:8000/api/index.php/products?limit=100">
+                                        <suspendOnFailure>
+                                            <initialDuration>-1</initialDuration>
+                                            <progressionFactor>1</progressionFactor>
+                                        </suspendOnFailure>
+                                        <markForSuspension>
+                                            <retriesBeforeSuspension>5</retriesBeforeSuspension>
+                                        </markForSuspension>
+                                    </http>
+                                </endpoint>
+                            </call>
+                            <script language="js"><![CDATA[var products = mc.getPayloadJSON();
+for (var p = 0; p < products.length; p++) {
+    mc.setProperty("Price_" + products[p].id, products[p].price);
+}]]></script>
+                            <!-- 2. Tra cứu khách hàng theo email -->
+                            <property expression="get-property('CustomerEmail')" name="uri.var.custEmail" scope="default" type="STRING"/>
+                            <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+                            <call>
+                                <endpoint>
+                                    <http method="get" uri-template="http://localhost:8000/api/index.php/thirdparties?sqlfilters=(t.email:=:'{uri.var.custEmail}')">
+                                        <suspendOnFailure>
+                                            <initialDuration>-1</initialDuration>
+                                            <progressionFactor>1</progressionFactor>
+                                        </suspendOnFailure>
+                                        <markForSuspension>
+                                            <retriesBeforeSuspension>5</retriesBeforeSuspension>
+                                        </markForSuspension>
+                                    </http>
+                                </endpoint>
+                            </call>
+                            <script language="js"><![CDATA[var result = mc.getPayloadJSON();
+var socId = "";
+if (result && result.length && result.length > 0 && result[0].id) {
+    socId = result[0].id;
+}
+mc.setProperty("CustomerSocId", socId);]]></script>
+                            <!-- 3. Nếu chưa có khách hàng (socId rỗng) -> tạo mới -->
+                            <filter regex="^$" source="get-property('CustomerSocId')">
+                                <then>
+                                    <payloadFactory media-type="json">
+                                        <format>
+											{
+											"name": "$1",
+											"email": "$2",
+											"client": 1
+											}
+										</format>
+                                        <args>
+                                            <arg evaluator="xml" expression="get-property('CustomerName')"/>
+                                            <arg evaluator="xml" expression="get-property('CustomerEmail')"/>
+                                        </args>
+                                    </payloadFactory>
+                                    <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+                                    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                                    <call>
+                                        <endpoint>
+                                            <http method="post" uri-template="http://localhost:8000/api/index.php/thirdparties">
+                                                <suspendOnFailure>
+                                                    <initialDuration>-1</initialDuration>
+                                                    <progressionFactor>1</progressionFactor>
+                                                </suspendOnFailure>
+                                                <markForSuspension>
+                                                    <retriesBeforeSuspension>5</retriesBeforeSuspension>
+                                                </markForSuspension>
+                                            </http>
+                                        </endpoint>
+                                    </call>
+                                    <property expression="fn:normalize-space($body//text())" name="CustomerSocId" scope="default" type="STRING"/>
+                                </then>
+                                <else/>
+                            </filter>
+                            <!-- 4. Khôi phục payload gốc từ Directus để đọc products -->
                             <enrich>
                                 <source clone="true" property="DirectusOriginalPayload" type="property"/>
                                 <target type="body"/>
@@ -49,28 +126,26 @@
                             <property expression="fn:substring(get-property('SYSTEM_TIME'), 1, 10)" name="EpochSeconds" scope="default" type="STRING"/>
                             <script language="js"><![CDATA[var payload = mc.getPayloadJSON();
                                 var dateSec = mc.getProperty("EpochSeconds");
-                                
-                                // Khởi tạo vỏ đơn hàng
+
                                 var dolibarrPayload = {
-                                    "socid": 1,
+                                    "socid": parseInt(mc.getProperty("CustomerSocId")),
                                     "date": parseInt(dateSec),
                                     "type": 0,
                                     "lines": []
                                 };
-                                
-                                // Lặp mảng đẩy thẳng vào lines của Dolibarr
+
                                 if (payload.products && payload.products.length > 0) {
                                     for (var i = 0; i < payload.products.length; i++) {
                                         dolibarrPayload.lines.push({
                                             "fk_product": payload.products[i].product_id,
                                             "qty": payload.products[i].quantity,
-                                            "subprice": payload.products[i].unit_price,
+                                            "subprice": mc.getProperty("Price_" + payload.products[i].product_id),
+                                            "tva_tx": 0,
                                             "product_type": 0
                                         });
                                     }
                                 }
-                                
-                                // Ép WSO2 nhận cục JSON mới này làm Body
+
                                 mc.setPayloadJSON(dolibarrPayload);]]></script>
                             <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
                             <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
@@ -82,7 +157,7 @@
                                             <progressionFactor>1</progressionFactor>
                                         </suspendOnFailure>
                                         <markForSuspension>
-                                            <retriesBeforeSuspension>0</retriesBeforeSuspension>
+                                            <retriesBeforeSuspension>5</retriesBeforeSuspension>
                                         </markForSuspension>
                                     </http>
                                 </endpoint>
@@ -107,7 +182,7 @@
                                                     <progressionFactor>1</progressionFactor>
                                                 </suspendOnFailure>
                                                 <markForSuspension>
-                                                    <retriesBeforeSuspension>0</retriesBeforeSuspension>
+                                                    <retriesBeforeSuspension>5</retriesBeforeSuspension>
                                                 </markForSuspension>
                                             </http>
                                         </endpoint>
@@ -115,9 +190,11 @@
                                     <payloadFactory media-type="json">
                                         <format>
 											{
-											"orderId": "$1",
-											"amount": "$2",
-											"orderInfo": "Thanh toan don hang $1"
+												"orderId": "$1",
+												"amount": "$2",
+												"orderInfo": "Thanh toan don hang $1",
+	        									"ipnUrl": "http://localhost:8290/api/v1/webhook/momo",
+	        									"redirectUrl": "https://momo.vn/return"
 											}
 										</format>
                                         <args>
@@ -134,7 +211,7 @@
                                                     <progressionFactor>1</progressionFactor>
                                                 </suspendOnFailure>
                                                 <markForSuspension>
-                                                    <retriesBeforeSuspension>0</retriesBeforeSuspension>
+                                                    <retriesBeforeSuspension>5</retriesBeforeSuspension>
                                                 </markForSuspension>
                                             </http>
                                         </endpoint>
@@ -143,83 +220,14 @@
                                     <payloadFactory media-type="json">
                                         <format>
 											{
-											"customer_name": "$1",
-											"customer_email": "$2",
-											"dolibarr_order_id": "$3",
-											"payment_url": "$4",
-											"status": "pending_payment"
-											}
-										</format>
-                                        <args>
-                                            <arg evaluator="xml" expression="get-property('CustomerName')"/>
-                                            <arg evaluator="xml" expression="get-property('CustomerEmail')"/>
-                                            <arg evaluator="xml" expression="get-property('DolibarrOrderID')"/>
-                                            <arg evaluator="xml" expression="get-property('MoMoPayURL')"/>
-                                        </args>
-                                    </payloadFactory>
-                                    <header expression="fn:concat('Bearer ', 'gAr4c9Gk7dfIx7oKlhpZGxmf8ohqfYJt')" name="Authorization" scope="transport"/>
-                                    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
-                                    <call>
-                                        <endpoint>
-                                            <http method="post" uri-template="http://localhost:1337/items/orders">
-                                                <suspendOnFailure>
-                                                    <initialDuration>-1</initialDuration>
-                                                    <progressionFactor>1</progressionFactor>
-                                                </suspendOnFailure>
-                                                <markForSuspension>
-                                                    <retriesBeforeSuspension>0</retriesBeforeSuspension>
-                                                </markForSuspension>
-                                            </http>
-                                        </endpoint>
-                                    </call>
-                                    <!-- Thêm vô chỗ này nè phải không? -->
-                                    <property expression="json-eval($.data.id)" name="DirectusOrderID" scope="default" type="STRING"/>
-                                    <enrich>
-                                        <source clone="true" property="DirectusOriginalPayload" type="property"/>
-                                        <target type="body"/>
-                                    </enrich>
-                                    <script language="js"><![CDATA[var payload = mc.getPayloadJSON();
-
-var items = [];
-
-if (payload.products) {
-    for (var i = 0; i < payload.products.length; i++) {
-
-        items.push({
-            order_id: mc.getProperty("DirectusOrderID"),
-            product_id: payload.products[i].product_id,
-            quantity: payload.products[i].quantity,
-            unit_price: payload.products[i].unit_price
-        });
-
-    }
-}
-
-mc.setPayloadJSON(items);]]></script>
-                                    <header expression="fn:concat('Bearer ', 'gAr4c9Gk7dfIx7oKlhpZGxmf8ohqfYJt')" name="Authorization" scope="transport"/>
-                                    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
-                                    <call>
-                                        <endpoint>
-                                            <http method="post" uri-template="http://localhost:1337/items/order_items">
-                                                <suspendOnFailure>
-                                                    <initialDuration>-1</initialDuration>
-                                                    <progressionFactor>1</progressionFactor>
-                                                </suspendOnFailure>
-                                                <markForSuspension>
-                                                    <retriesBeforeSuspension>0</retriesBeforeSuspension>
-                                                </markForSuspension>
-                                            </http>
-                                        </endpoint>
-                                    </call>
-                                    <payloadFactory media-type="json">
-                                        <format>
-											{
 											"status": "success",
 											"message": "Đã tạo đơn và link thanh toán.",
-											"payment_url": "$1"
+											"dolibarr_order_id": "$1",
+											"payment_url": "$2"
 											}
 										</format>
                                         <args>
+                                            <arg evaluator="xml" expression="get-property('DolibarrOrderID')"/>
                                             <arg evaluator="xml" expression="get-property('MoMoPayURL')"/>
                                         </args>
                                     </payloadFactory>
@@ -228,8 +236,7 @@ mc.setPayloadJSON(items);]]></script>
                                 <else>
                                     <payloadFactory media-type="json">
                                         <format>
-											{"error": "Failed to create order in Dolibarr", "details": "$1"}
-										</format>
+											{"error": "Failed to create order in Dolibarr", "details": "$1"}</format>
                                         <args>
                                             <arg evaluator="xml" expression="get-property('DolibarrOrderID')"/>
                                         </args>
@@ -242,8 +249,7 @@ mc.setPayloadJSON(items);]]></script>
                         <else>
                             <payloadFactory media-type="json">
                                 <format>
-									{"error": "Unauthorized", "message": "Invalid or expired token"}
-								</format>
+									{"error": "Unauthorized", "message": "Invalid or expired token"}</format>
                                 <args/>
                             </payloadFactory>
                             <property name="HTTP_SC" scope="axis2" type="STRING" value="401"/>
@@ -254,8 +260,7 @@ mc.setPayloadJSON(items);]]></script>
                 <else>
                     <payloadFactory media-type="json">
                         <format>
-							{"error": "Unauthorized", "message": "Missing Authorization header"}
-						</format>
+							{"error": "Unauthorized", "message": "Missing Authorization header"}</format>
                         <args/>
                     </payloadFactory>
                     <property name="HTTP_SC" scope="axis2" type="STRING" value="401"/>
