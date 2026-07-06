@@ -84,11 +84,28 @@
                         </endpoint>
                     </call>
                     <script language="js"><![CDATA[var result = mc.getPayloadJSON();
-                        var isCustomerId = "";
-                        if (result && result.data && result.data.length > 0) {
-                            isCustomerId = String(result.data[0].id);
-                        }
-                        mc.setProperty("ISCustomerId", isCustomerId);]]></script>
+    var emailToFind = mc.getProperty("CustomerEmail");
+    var isCustomerId = "";
+    
+    // Debug log - Kiểm tra xem cái gì được trả về
+    java.lang.System.out.println("DEBUG: Email can tim: " + emailToFind);
+    
+    if (result && result.data && Array.isArray(result.data)) {
+        for (var i = 0; i < result.data.length; i++) {
+            var customer = result.data[i];
+            java.lang.System.out.println("DEBUG: Dang check khach: " + customer.name + " - Email: " + customer.email);
+            
+            // So sánh email tuyệt đối
+            if (customer.email && emailToFind && customer.email.toLowerCase() == emailToFind.toLowerCase()) {
+                isCustomerId = String(customer.id);
+                java.lang.System.out.println("DEBUG: TIM THAY KHACH TRUNG KHOP! ID: " + isCustomerId);
+                break;
+            }
+        }
+    }
+    
+    // Nếu isCustomerId vẫn rỗng -> Luồng sẽ tự động nhảy vào nhánh <then> để TẠO MỚI
+    mc.setProperty("ISCustomerId", isCustomerId);]]></script>
                     <filter regex="^$" source="get-property('ISCustomerId')">
                         <then>
                             <payloadFactory media-type="json">
@@ -163,6 +180,7 @@
                             "discount_val": 0,
                             "tax": 0,
                             "total": subTotal,
+                            "exchange_rate": 1,
                             "items": items
                         };
                         mc.setPayloadJSON(invoicePayload);]]></script>
@@ -192,6 +210,7 @@
 							"payment_number": "PAY-$2",
 							"invoice_id": $2,
 							"amount": $3,
+							"exchange_rate": 1,
 							"payment_date": "$4"
 							}
 						</format>
@@ -205,6 +224,9 @@
                     <header expression="fn:concat('Bearer ', get-property('ISToken'))" name="Authorization" scope="transport"/>
                     <property name="company" scope="transport" type="STRING" value="1"/>
                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <log level="full">
+                        <property expression="get-property('ISInvoiceId')" name="DEBUG_PAYMENT_PAYLOAD"/>
+                    </log>
                     <call>
                         <endpoint>
                             <http method="post" uri-template="http://localhost:8002/api/v1/payments">
@@ -279,7 +301,8 @@
                 <else>
                     <payloadFactory media-type="json">
                         <format>
-							{"status": "ignored", "reason": "payment not successful"}</format>
+							{"status": "ignored", "reason": "payment not successful"}
+						</format>
                         <args/>
                     </payloadFactory>
                     <property name="HTTP_SC" scope="axis2" type="STRING" value="200"/>
