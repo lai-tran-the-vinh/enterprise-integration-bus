@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api context="/api/v1/payments/vnpay" name="VNPayAPI" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="POST" uri-template="/">
+        <inSequence>
+            <!-- Lấy thông tin đầu vào -->
+            <property expression="json-eval($.orderId)" name="orderId" scope="default" type="STRING"/>
+            <property expression="json-eval($.amount)" name="amount" scope="default" type="STRING"/>
+            <property expression="json-eval($.orderInfo)" name="orderInfo" scope="default" type="STRING"/>
+            <property expression="json-eval($.redirectUrl)" name="redirectUrl" scope="default" type="STRING"/>
+            <!-- 2. Cấu hình -->
+            <property name="vnp_TmnCode" scope="default" type="STRING" value="ZERI53G9"/>
+            <property name="vnp_HashSecret" scope="default" type="STRING" value="14BD91DNB0D4YWYSQNRB5EFID0W0FOL1"/>
+            <!-- 3. Tự động mã hóa SHA-512 và xây dựng liên kết VNPay bằng JS -->
+            <script language="js"><![CDATA[var tmnCode = mc.getProperty("vnp_TmnCode");
+                var secretKey = mc.getProperty("vnp_HashSecret");
+                var orderId = mc.getProperty("orderId");
+                var amount = mc.getProperty("amount"); 
+                var orderInfo = mc.getProperty("orderInfo");
+                var returnUrl = mc.getProperty("redirectUrl");
+                
+                // VNPay bắt buộc số tiền phải nhân lên 100
+                var vnp_Amount = parseInt(amount) * 100;
+                
+                var SimpleDateFormat = Packages.java.text.SimpleDateFormat;
+                var Date = Packages.java.util.Date;
+                var TimeZone = Packages.java.util.TimeZone;
+                var formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+                formatter.setTimeZone(TimeZone.getTimeZone("GMT+7"));
+                
+                var vnp_CreateDate = formatter.format(new Date());
+                
+                var expireCal = Packages.java.util.Calendar.getInstance();
+                expireCal.add(Packages.java.util.Calendar.MINUTE, 15);
+                var vnp_ExpireDate = formatter.format(expireCal.getTime());
+                
+                // Tự động sắp xếp Alphabet theo luật VNPay bằng Java TreeMap
+                var vnp_Params = new Packages.java.util.TreeMap();
+                vnp_Params.put("vnp_Version", "2.1.0");
+                vnp_Params.put("vnp_Command", "pay");
+                vnp_Params.put("vnp_TmnCode", tmnCode);
+                vnp_Params.put("vnp_Amount", String(vnp_Amount));
+                vnp_Params.put("vnp_CurrCode", "VND");
+                vnp_Params.put("vnp_TxnRef", orderId);
+                vnp_Params.put("vnp_OrderInfo", orderInfo);
+                vnp_Params.put("vnp_OrderType", "other");
+                vnp_Params.put("vnp_Locale", "vn");
+                vnp_Params.put("vnp_ReturnUrl", returnUrl);
+                vnp_Params.put("vnp_IpAddr", "127.0.0.1");
+                vnp_Params.put("vnp_CreateDate", vnp_CreateDate);
+                vnp_Params.put("vnp_ExpireDate", vnp_ExpireDate);
+                
+                var fieldNames = new Packages.java.util.ArrayList(vnp_Params.keySet());
+                var URLEncoder = Packages.java.net.URLEncoder;
+                var String = Packages.java.lang.String;
+                
+                var hashData = "";
+                var query = "";
+                
+                for (var i = 0; i < fieldNames.size(); i++) {
+                    var fieldName = fieldNames.get(i);
+                    var fieldValue = vnp_Params.get(fieldName);
+                    if ((fieldValue != null) && (fieldValue.length() > 0)) {
+                        hashData += fieldName + '=' + URLEncoder.encode(fieldValue, "US-ASCII");
+                        query += URLEncoder.encode(fieldName, "US-ASCII") + '=' + URLEncoder.encode(fieldValue, "US-ASCII");
+                        if (i < fieldNames.size() - 1) {
+                            query += '&';
+                            hashData += '&';
+                        }
+                    }
+                }
+                
+                // Băm mã HMAC-SHA512
+                var Mac = Packages.javax.crypto.Mac;
+                var SecretKeySpec = Packages.javax.crypto.spec.SecretKeySpec;
+                
+                var secretKeySpec = new SecretKeySpec(new String(secretKey).getBytes("UTF-8"), "HmacSHA512");
+                var mac = Mac.getInstance("HmacSHA512");
+                mac.init(secretKeySpec);
+                var hmacData = mac.doFinal(new String(hashData).getBytes("UTF-8"));
+                
+                var hexFormatter = new Packages.java.util.Formatter();
+                for (var i = 0; i < hmacData.length; i++) {
+                    hexFormatter.format("%02x", new Packages.java.lang.Byte(hmacData[i]));
+                }
+                var vnp_SecureHash = hexFormatter.toString();
+                
+                // Gắn URL Sandbox
+                var paymentUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?" + query + "&vnp_SecureHash=" + vnp_SecureHash;
+                
+                // Đóng gói JSON trả về với tên 'payUrl' cho khớp code cũ
+                var payload = {
+                    "status": "success",
+                    "message": "Đã tạo link thanh toán VNPay.",
+                    "payUrl": paymentUrl
+                };
+                
+                mc.setPayloadJSON(payload);]]></script>
+            <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+            <respond/>
+        </inSequence>
+        <outSequence/>
+        <faultSequence/>
+    </resource>
+</api>

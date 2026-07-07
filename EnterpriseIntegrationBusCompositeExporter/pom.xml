@@ -14,39 +14,24 @@
   <name>EnterpriseIntegrationBusCompositeExporter</name>
   <description>EnterpriseIntegrationBusCompositeExporter</description>
   <properties>
-    <com.example.metadata_._MomoWebhookAPI_swagger>capp/EnterpriseServiceBus</com.example.metadata_._MomoWebhookAPI_swagger>
     <com.example.metadata_._DirectusOrderAPI_swagger>capp/EnterpriseServiceBus</com.example.metadata_._DirectusOrderAPI_swagger>
-    <com.example.api_._MomoWebhookAPI>capp/EnterpriseServiceBus</com.example.api_._MomoWebhookAPI>
-    <com.example.api_._DirectusOrderAPI>capp/EnterpriseServiceBus</com.example.api_._DirectusOrderAPI>
     <com.example.metadata_._MomoWebhookAPI_metadata>capp/EnterpriseServiceBus</com.example.metadata_._MomoWebhookAPI_metadata>
-    <com.example.api_._MomoPaymentAPI>capp/EnterpriseServiceBus</com.example.api_._MomoPaymentAPI>
+    <com.example.api_._DirectusOrderAPI>capp/EnterpriseServiceBus</com.example.api_._DirectusOrderAPI>
+    <com.example.api_._VNPayWebhookAPI>capp/EnterpriseServiceBus</com.example.api_._VNPayWebhookAPI>
+    <com.example.api_._VNPayReturnAPI>capp/EnterpriseServiceBus</com.example.api_._VNPayReturnAPI>
+    <com.example.api_._VNPayAPI>capp/EnterpriseServiceBus</com.example.api_._VNPayAPI>
+    <com.example.metadata_._VNPayReturnAPI_metadata>capp/EnterpriseServiceBus</com.example.metadata_._VNPayReturnAPI_metadata>
     <com.example.metadata_._DirectusOrderAPI_metadata>capp/EnterpriseServiceBus</com.example.metadata_._DirectusOrderAPI_metadata>
     <artifact.types>jaggery/app=zip,synapse/priority-executor=xml,synapse/inbound-endpoint=xml,service/rule=aar,synapse/message-store=xml,event/stream=json,service/meta=xml,datasource/datasource=xml,synapse/proxy-service=xml,bpel/workflow=zip,synapse/sequence=xml,synapse/endpointTemplate=xml,carbon/application=car,wso2/gadget=dar,synapse/api=xml,synapse/event-source=xml,synapse/message-processors=xml,event/receiver=xml,lib/dataservice/validator=jar,synapse/template=xml,synapse/endpoint=xml,lib/carbon/ui=jar,lib/synapse/mediator=jar,synapse/metadata=yaml,event/publisher=xml,synapse/local-entry=xml,synapse/task=xml,webapp/jaxws=war,registry/resource=zip,synapse/configuration=xml,service/axis2=aar,synapse/lib=zip,synapse/sequenceTemplate=xml,event/execution-plan=siddhiql,service/dataservice=dbs,web/application=war,lib/library/bundle=jar</artifact.types>
+    <com.example.metadata_._VNPayWebhookAPI_swagger>capp/ApplicationServer</com.example.metadata_._VNPayWebhookAPI_swagger>
+    <com.example.metadata_._VNPayReturnAPI_swagger>capp/EnterpriseServiceBus</com.example.metadata_._VNPayReturnAPI_swagger>
   </properties>
   <dependencies>
-    <dependency>
-      <groupId>com.example.metadata</groupId>
-      <artifactId>MomoWebhookAPI_swagger</artifactId>
-      <version>1.0.0</version>
-      <type>yaml</type>
-    </dependency>
     <dependency>
       <groupId>com.example.metadata</groupId>
       <artifactId>DirectusOrderAPI_swagger</artifactId>
       <version>1.0.0</version>
       <type>yaml</type>
-    </dependency>
-    <dependency>
-      <groupId>com.example.api</groupId>
-      <artifactId>MomoWebhookAPI</artifactId>
-      <version>1.0.0</version>
-      <type>xml</type>
-    </dependency>
-    <dependency>
-      <groupId>com.example.api</groupId>
-      <artifactId>DirectusOrderAPI</artifactId>
-      <version>1.0.0</version>
-      <type>xml</type>
     </dependency>
     <dependency>
       <groupId>com.example.metadata</groupId>
@@ -56,13 +41,49 @@
     </dependency>
     <dependency>
       <groupId>com.example.api</groupId>
-      <artifactId>MomoPaymentAPI</artifactId>
+      <artifactId>DirectusOrderAPI</artifactId>
+      <version>1.0.0</version>
+      <type>xml</type>
+    </dependency>
+    <dependency>
+      <groupId>com.example.api</groupId>
+      <artifactId>VNPayWebhookAPI</artifactId>
+      <version>1.0.0</version>
+      <type>xml</type>
+    </dependency>
+    <dependency>
+      <groupId>com.example.api</groupId>
+      <artifactId>VNPayReturnAPI</artifactId>
+      <version>1.0.0</version>
+      <type>xml</type>
+    </dependency>
+    <dependency>
+      <groupId>com.example.api</groupId>
+      <artifactId>VNPayAPI</artifactId>
       <version>1.0.0</version>
       <type>xml</type>
     </dependency>
     <dependency>
       <groupId>com.example.metadata</groupId>
+      <artifactId>VNPayReturnAPI_metadata</artifactId>
+      <version>1.0.0</version>
+      <type>yaml</type>
+    </dependency>
+    <dependency>
+      <groupId>com.example.metadata</groupId>
       <artifactId>DirectusOrderAPI_metadata</artifactId>
+      <version>1.0.0</version>
+      <type>yaml</type>
+    </dependency>
+    <dependency>
+      <groupId>com.example.metadata</groupId>
+      <artifactId>VNPayWebhookAPI_swagger</artifactId>
+      <version>1.0.0</version>
+      <type>yaml</type>
+    </dependency>
+    <dependency>
+      <groupId>com.example.metadata</groupId>
+      <artifactId>VNPayReturnAPI_swagger</artifactId>
       <version>1.0.0</version>
       <type>yaml</type>
     </dependency>

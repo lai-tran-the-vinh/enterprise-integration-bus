@@ -1,0 +1,13 @@
+openapi: 3.0.1
+info:
+  title: VNPayReturnAPI
+  description: API Definition of VNPayReturnAPI
+  version: 1.0.0
+servers:
+- url: http://localhost:8290/api/v1/vnpay/return
+paths:
+  /:
+    get:
+      responses:
+        default:
+          description: Default response

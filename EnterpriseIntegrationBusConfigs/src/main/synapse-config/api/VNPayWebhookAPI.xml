@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<api context="/api/v1/webhook" name="MomoWebhookAPI" xmlns="http://ws.apache.org/ns/synapse">
-    <resource methods="POST" uri-template="/momo">
+<api context="/api/v1/webhook" name="VNPayWebhookAPI" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="GET" uri-template="/vnpay">
         <inSequence>
-            <property expression="json-eval($.orderId)" name="uri.var.orderid" scope="default" type="STRING"/>
-            <property expression="json-eval($.orderId)" name="DolibarrOrderID" scope="default" type="STRING"/>
-            <property expression="json-eval($.resultCode)" name="ResultCode" scope="default" type="STRING"/>
-            <filter regex="^0$" source="get-property('ResultCode')">
+            <header action="remove" name="Cookie" scope="transport"/>
+            <header action="remove" name="Authorization" scope="transport"/>
+            <header name="Accept" scope="transport" value="application/json"/>
+            <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+            <property expression="get-property('query.param.vnp_TxnRef')" name="uri.var.orderid" scope="default" type="STRING"/>
+            <property expression="get-property('query.param.vnp_TxnRef')" name="DolibarrOrderID" scope="default" type="STRING"/>
+            <property expression="get-property('query.param.vnp_ResponseCode')" name="ResultCode" scope="default" type="STRING"/>
+            <filter regex="^00$" source="get-property('ResultCode')">
                 <then>
                     <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+                    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
                             <http method="get" uri-template="http://localhost:8000/api/index.php/orders/{uri.var.orderid}">
@@ -27,6 +34,9 @@
                         <target property="DolibarrOrder" type="property"/>
                     </enrich>
                     <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+                    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
                             <http method="get" uri-template="http://localhost:8000/api/index.php/thirdparties/{uri.var.socid}">
@@ -42,6 +52,11 @@
                     </call>
                     <property expression="json-eval($.name)" name="CustomerName" scope="default" type="STRING"/>
                     <property expression="json-eval($.email)" name="CustomerEmail" scope="default" type="STRING"/>
+                    <log level="custom">
+                        <property name="--- KIEM TRA DATA DOLIBARR TRA VE ---" value="======================="/>
+                        <property expression="get-property('CustomerName')" name="1_TEN_KHACH_HANG"/>
+                        <property expression="get-property('CustomerEmail')" name="2_EMAIL_KHACH_HANG"/>
+                    </log>
                     <payloadFactory media-type="json">
                         <format>
 							{
@@ -53,6 +68,8 @@
                         <args/>
                     </payloadFactory>
                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
                             <http method="post" uri-template="http://localhost:8002/api/v1/auth/login">
@@ -70,6 +87,10 @@
                     <property expression="get-property('CustomerEmail')" name="uri.var.custEmail" scope="default" type="STRING"/>
                     <header expression="fn:concat('Bearer ', get-property('ISToken'))" name="Authorization" scope="transport"/>
                     <property name="company" scope="transport" type="STRING" value="1"/>
+                    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="Accept" scope="transport" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
                             <http method="get" uri-template="http://localhost:8002/api/v1/customers?filter[email]={uri.var.custEmail}">
@@ -120,6 +141,9 @@
                             <header expression="fn:concat('Bearer ', get-property('ISToken'))" name="Authorization" scope="transport"/>
                             <property name="company" scope="transport" type="STRING" value="1"/>
                             <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                            <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
+                            <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
+                            <property name="Accept" scope="transport" type="STRING" value="application/json"/>
                             <call>
                                 <endpoint>
                                     <http method="post" uri-template="http://localhost:8002/api/v1/customers">
@@ -187,6 +211,9 @@
                     <header expression="fn:concat('Bearer ', get-property('ISToken'))" name="Authorization" scope="transport"/>
                     <property name="company" scope="transport" type="STRING" value="1"/>
                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="Accept" scope="transport" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
                             <http method="post" uri-template="http://localhost:8002/api/v1/invoices">
@@ -224,9 +251,9 @@
                     <header expression="fn:concat('Bearer ', get-property('ISToken'))" name="Authorization" scope="transport"/>
                     <property name="company" scope="transport" type="STRING" value="1"/>
                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
-                    <log level="full">
-                        <property expression="get-property('ISInvoiceId')" name="DEBUG_PAYMENT_PAYLOAD"/>
-                    </log>
+                    <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="Accept" scope="transport" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
                             <http method="post" uri-template="http://localhost:8002/api/v1/payments">
@@ -254,6 +281,8 @@
                         </args>
                     </payloadFactory>
                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
                             <http method="put" uri-template="http://localhost:8000/api/index.php/orders/{uri.var.orderid}">
@@ -276,6 +305,8 @@
                         <args/>
                     </payloadFactory>
                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
                             <http method="post" uri-template="http://localhost:8000/api/index.php/orders/{uri.var.orderid}/close">
@@ -291,7 +322,7 @@
                     </call>
                     <payloadFactory media-type="json">
                         <format>
-							{"status": "received"}
+							{"RspCode": "00", "Message": "Confirm Success"}
 						</format>
                         <args/>
                     </payloadFactory>
@@ -301,7 +332,7 @@
                 <else>
                     <payloadFactory media-type="json">
                         <format>
-							{"status": "ignored", "reason": "payment not successful"}
+							{"RspCode": "02", "Message": "Order Failed"}
 						</format>
                         <args/>
                     </payloadFactory>

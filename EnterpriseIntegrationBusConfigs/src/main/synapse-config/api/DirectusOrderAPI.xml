@@ -190,23 +190,21 @@ mc.setProperty("CustomerSocId", socId);]]></script>
                                     <payloadFactory media-type="json">
                                         <format>
 											{
-												"orderId": "$1-$3",
-												"amount": "$2",
-												"orderInfo": "Thanh toan don hang $1",
-	        									"ipnUrl": "http://localhost:8290/api/v1/webhook/momo",
-	        									"redirectUrl": "https://momo.vn/return"
+											"orderId": "$1",
+											"amount": "$2",
+											"orderInfo": "Thanh toan don hang $1",
+											"redirectUrl": "http://localhost:8290/api/v1/vnpay/return"
 											}
 										</format>
                                         <args>
                                             <arg evaluator="xml" expression="get-property('DolibarrOrderID')"/>
                                             <arg evaluator="xml" expression="get-property('OrderAmount')"/>
-                                            <arg evaluator="xml" expression="get-property('SYSTEM_TIME')"/>
                                         </args>
                                     </payloadFactory>
                                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
                                     <call>
                                         <endpoint>
-                                            <http method="post" uri-template="http://localhost:8290/api/v1/payments/momo">
+                                            <http method="post" uri-template="http://localhost:8290/api/v1/payments/vnpay">
                                                 <suspendOnFailure>
                                                     <initialDuration>-1</initialDuration>
                                                     <progressionFactor>1</progressionFactor>
@@ -217,27 +215,45 @@ mc.setProperty("CustomerSocId", socId);]]></script>
                                             </http>
                                         </endpoint>
                                     </call>
-                                    <property expression="json-eval($.payUrl)" name="MoMoPayURL" scope="default" type="STRING"/>
-                                    <payloadFactory media-type="json">
-                                        <format>
-											{
-											"status": "success",
-											"message": "Đã tạo đơn và link thanh toán.",
-											"dolibarr_order_id": "$1",
-											"payment_url": "$2"
-											}
-										</format>
-                                        <args>
-                                            <arg evaluator="xml" expression="get-property('DolibarrOrderID')"/>
-                                            <arg evaluator="xml" expression="get-property('MoMoPayURL')"/>
-                                        </args>
-                                    </payloadFactory>
-                                    <respond/>
+                                    <property expression="json-eval($.payUrl)" name="VNPayPayURL" scope="default" type="STRING"/>
+                                    <filter regex="^.+$" source="get-property('VNPayPayURL')">
+                                        <then>
+                                            <payloadFactory media-type="json">
+                                                <format>
+													{
+													"status": "success",
+													"message": "Đã tạo đơn hàng và link thanh toán thành công.",
+													"dolibarr_order_id": "$1",
+													"payment_url": "$2"
+													}
+												</format>
+                                                <args>
+                                                    <arg evaluator="xml" expression="get-property('DolibarrOrderID')"/>
+                                                    <arg evaluator="xml" expression="get-property('VNPayPayURL')"/>
+                                                </args>
+                                            </payloadFactory>
+                                            <respond/>
+                                        </then>
+                                        <else>
+                                            <payloadFactory media-type="json">
+                                                <format>
+													{
+													"status": "error",
+													"message": "Không thể tạo link thanh toán VNPay. Vui lòng thử lại sau."
+													}
+												</format>
+                                                <args/>
+                                            </payloadFactory>
+                                            <property name="HTTP_SC" scope="axis2" type="STRING" value="500"/>
+                                            <respond/>
+                                        </else>
+                                    </filter>
                                 </then>
                                 <else>
                                     <payloadFactory media-type="json">
                                         <format>
-											{"error": "Failed to create order in Dolibarr", "details": "$1"}</format>
+											{"error": "Failed to create order in Dolibarr", "details": "$1"}
+										</format>
                                         <args>
                                             <arg evaluator="xml" expression="get-property('DolibarrOrderID')"/>
                                         </args>
@@ -250,7 +266,8 @@ mc.setProperty("CustomerSocId", socId);]]></script>
                         <else>
                             <payloadFactory media-type="json">
                                 <format>
-									{"error": "Unauthorized", "message": "Invalid or expired token"}</format>
+									{"error": "Unauthorized", "message": "Invalid or expired token"}
+								</format>
                                 <args/>
                             </payloadFactory>
                             <property name="HTTP_SC" scope="axis2" type="STRING" value="401"/>
@@ -261,7 +278,8 @@ mc.setProperty("CustomerSocId", socId);]]></script>
                 <else>
                     <payloadFactory media-type="json">
                         <format>
-							{"error": "Unauthorized", "message": "Missing Authorization header"}</format>
+							{"error": "Unauthorized", "message": "Missing Authorization header"}
+						</format>
                         <args/>
                     </payloadFactory>
                     <property name="HTTP_SC" scope="axis2" type="STRING" value="401"/>
