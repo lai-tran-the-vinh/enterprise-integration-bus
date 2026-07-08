@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api context="/api/v1/products" name="GetProductsAPI" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="GET" uri-template="/">
+        <inSequence>
+            <header action="remove" name="Cookie" scope="transport"/>
+            <header action="remove" name="Authorization" scope="transport"/>
+            <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+            <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+            <property name="Accept" scope="transport" type="STRING" value="application/json"/>
+            <call>
+                <endpoint>
+                    <http method="get" uri-template="http://localhost:8000/api/index.php/products?limit=100&amp;sortfield=t.ref&amp;sortorder=ASC">
+                        <suspendOnFailure>
+                            <initialDuration>-1</initialDuration>
+                            <progressionFactor>1</progressionFactor>
+                        </suspendOnFailure>
+                        <markForSuspension>
+                            <retriesBeforeSuspension>5</retriesBeforeSuspension>
+                        </markForSuspension>
+                    </http>
+                </endpoint>
+            </call>
+            <script language="js"><![CDATA[var result = mc.getPayloadJSON();
+                var cleanProducts = [];
+                if (result && Array.isArray(result)) {
+                    for (var i = 0; i < result.length; i++) {
+                        var p = result[i];
+                        cleanProducts.push({
+                            id: parseInt(p.id),
+                            ref: String(p.ref || ""),
+                            name: String(p.label || p.ref || "Sản phẩm chưa đặt tên"),
+                            price: parseFloat(p.price || p.price_ttc || 0),
+                            description: String(p.description || ""),
+                            stock: parseInt(p.stock_reel || 0)
+                        });
+                    }
+                }
+                mc.setPayloadJSON(cleanProducts);]]></script>
+            <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+            <respond/>
+        </inSequence>
+        <outSequence/>
+        <faultSequence>
+            <payloadFactory media-type="json">
+                <format>{"error": "Không lấy được danh sách sản phẩm từ Dolibarr"}</format>
+                <args/>
+            </payloadFactory>
+            <property name="HTTP_SC" scope="axis2" type="STRING" value="500"/>
+            <respond/>
+        </faultSequence>
+    </resource>
+</api>

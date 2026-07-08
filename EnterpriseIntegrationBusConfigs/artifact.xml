@@ -35,4 +35,13 @@
     <artifact name="VNPayReturnAPI_metadata" groupId="com.example.metadata" version="1.0.0" type="synapse/metadata" serverRole="EnterpriseServiceBus">
         <file>src/main/resources/metadata/VNPayReturnAPI_metadata.yaml</file>
     </artifact>
+    <artifact name="GetProductAPI" groupId="com.example.api" version="1.0.0" type="synapse/api" serverRole="EnterpriseServiceBus">
+        <file>src/main/synapse-config/api/GetProductAPI.xml</file>
+    </artifact>
+    <artifact name="GetProductAPI_swagger" groupId="com.example.metadata" version="1.0.0" type="synapse/metadata" serverRole="EnterpriseServiceBus">
+        <file>src/main/resources/metadata/GetProductAPI_swagger.yaml</file>
+    </artifact>
+    <artifact name="GetProductAPI_metadata" groupId="com.example.metadata" version="1.0.0" type="synapse/metadata" serverRole="EnterpriseServiceBus">
+        <file>src/main/resources/metadata/GetProductAPI_metadata.yaml</file>
+    </artifact>
 </artifacts>
