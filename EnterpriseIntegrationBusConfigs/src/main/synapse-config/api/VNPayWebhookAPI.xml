@@ -93,7 +93,7 @@
                     <property name="Accept" scope="transport" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
-                            <http method="get" uri-template="http://localhost:8002/api/v1/customers?filter[email]={uri.var.custEmail}">
+                            <http method="get" uri-template="http://localhost:8002/api/v1/customers?search={uri.var.custEmail}&amp;limit=100">
                                 <suspendOnFailure>
                                     <initialDuration>-1</initialDuration>
                                     <progressionFactor>1</progressionFactor>
@@ -105,27 +105,21 @@
                         </endpoint>
                     </call>
                     <script language="js"><![CDATA[var result = mc.getPayloadJSON();
-    var emailToFind = mc.getProperty("CustomerEmail");
+    // BẮT BUỘC dùng String() và .trim() để ép kiểu Java String sang JS String
+    var emailToFind = String(mc.getProperty("CustomerEmail") || "").toLowerCase().trim();
     var isCustomerId = "";
-    
-    // Debug log - Kiểm tra xem cái gì được trả về
-    java.lang.System.out.println("DEBUG: Email can tim: " + emailToFind);
     
     if (result && result.data && Array.isArray(result.data)) {
         for (var i = 0; i < result.data.length; i++) {
             var customer = result.data[i];
-            java.lang.System.out.println("DEBUG: Dang check khach: " + customer.name + " - Email: " + customer.email);
+            var custEmail = String(customer.email || "").toLowerCase().trim();
             
-            // So sánh email tuyệt đối
-            if (customer.email && emailToFind && customer.email.toLowerCase() == emailToFind.toLowerCase()) {
+            if (custEmail !== "" && custEmail === emailToFind) {
                 isCustomerId = String(customer.id);
-                java.lang.System.out.println("DEBUG: TIM THAY KHACH TRUNG KHOP! ID: " + isCustomerId);
                 break;
             }
         }
     }
-    
-    // Nếu isCustomerId vẫn rỗng -> Luồng sẽ tự động nhảy vào nhánh <then> để TẠO MỚI
     mc.setProperty("ISCustomerId", isCustomerId);]]></script>
                     <filter regex="^$" source="get-property('ISCustomerId')">
                         <then>

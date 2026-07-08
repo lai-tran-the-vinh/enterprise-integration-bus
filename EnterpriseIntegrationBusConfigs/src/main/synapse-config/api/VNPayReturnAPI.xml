@@ -23,16 +23,8 @@
                     </http>
                 </endpoint>
             </call>
-            <payloadFactory media-type="json">
-                <format>
-                    {
-                        "status": "success",
-                        "message": "Giao dịch đã được xử lý. Cảm ơn bạn!"
-                    }
-                </format>
-                <args/>
-            </payloadFactory>
-            <property name="messageType" scope="axis2" type="STRING" value="text/html"/>
+            <property name="HTTP_SC" scope="axis2" type="STRING" value="302"/>
+            <header expression="fn:concat('http://localhost:3000/order-result?orderId=', get-property('uri.var.ref'), '&amp;status=success')" name="Location" scope="transport"/>
             <respond/>
         </inSequence>
         <outSequence/>
