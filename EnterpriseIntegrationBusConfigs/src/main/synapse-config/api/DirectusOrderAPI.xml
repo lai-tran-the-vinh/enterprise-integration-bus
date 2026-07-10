@@ -231,8 +231,7 @@ mc.setProperty("CustomerSocId", socId);]]></script>
                                 <else>
                                     <payloadFactory media-type="json">
                                         <format>
-											{"error": "Failed to create order in Dolibarr", "details": "$1"}
-										</format>
+											{"error": "Failed to create order in Dolibarr", "details": "$1"}</format>
                                         <args>
                                             <arg evaluator="xml" expression="get-property('DolibarrOrderID')"/>
                                         </args>
@@ -245,8 +244,7 @@ mc.setProperty("CustomerSocId", socId);]]></script>
                         <else>
                             <payloadFactory media-type="json">
                                 <format>
-									{"error": "Unauthorized", "message": "Invalid or expired token"}
-								</format>
+									{"error": "Unauthorized", "message": "Invalid or expired token"}</format>
                                 <args/>
                             </payloadFactory>
                             <property name="HTTP_SC" scope="axis2" type="STRING" value="401"/>
@@ -257,8 +255,7 @@ mc.setProperty("CustomerSocId", socId);]]></script>
                 <else>
                     <payloadFactory media-type="json">
                         <format>
-							{"error": "Unauthorized", "message": "Missing Authorization header"}
-						</format>
+							{"error": "Unauthorized", "message": "Missing Authorization header"}</format>
                         <args/>
                     </payloadFactory>
                     <property name="HTTP_SC" scope="axis2" type="STRING" value="401"/>

@@ -31,7 +31,8 @@
                             name: String(p.label || p.ref || "Sản phẩm chưa đặt tên"),
                             price: parseFloat(p.price || p.price_ttc || 0),
                             description: String(p.description || ""),
-                            stock: parseInt(p.stock_reel || 0)
+                            stock: parseInt(p.stock_reel || 0),
+                            img: (p.array_options && p.array_options.options_url_hinh_anh) ? p.array_options.options_url_hinh_anh : ''
                         });
                     }
                 }
