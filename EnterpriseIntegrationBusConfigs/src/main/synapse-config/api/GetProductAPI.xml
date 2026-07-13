@@ -4,7 +4,10 @@
         <inSequence>
             <header action="remove" name="Cookie" scope="transport"/>
             <header action="remove" name="Authorization" scope="transport"/>
-            <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+            <script language="js"><![CDATA[var token = java.lang.System.getenv('DOLIBARR_TOKEN');
+			    
+			    mc.setProperty('DOLIBARR_TOKEN', token);]]></script>
+            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
             <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
             <property name="Accept" scope="transport" type="STRING" value="application/json"/>
             <call>

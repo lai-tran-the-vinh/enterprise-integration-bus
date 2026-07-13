@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<api context="/api/v1/orders" name="DirectusOrderAPI" xmlns="http://ws.apache.org/ns/synapse">
+<api context="/api/v1/orders" name="OrderAPI" xmlns="http://ws.apache.org/ns/synapse">
     <resource methods="POST" uri-template="/">
         <inSequence>
-            <!-- 1. Lấy bảng giá sản phẩm từ Dolibarr -->
             <property expression="json-eval($.customer_name)" name="CustomerName" scope="default" type="STRING"/>
             <property expression="json-eval($.customer_email)" name="CustomerEmail" scope="default" type="STRING"/>
             <property expression="json-eval($.amount)" name="OrderAmount" scope="default" type="STRING"/>
@@ -11,6 +10,11 @@
                 <source clone="true" type="body"/>
                 <target property="DirectusOriginalPayload" type="property"/>
             </enrich>
+            <script language="js"><![CDATA[var secret = java.lang.System.getenv('KEYCLOAK_CLIENT_SECRET');
+			    var dolibarrToken = java.lang.System.getenv('DOLIBARR_TOKEN');
+			    
+			    mc.setProperty('KEYCLOAK_CLIENT_SECRET', secret);
+			    mc.setProperty('DOLIBARR_TOKEN', dolibarrToken);]]></script>
             <filter regex="^Bearer .+" source="get-property('AuthHeader')">
                 <then>
                     <property expression="fn:substring-after(get-property('AuthHeader'), 'Bearer ')" name="BearerToken" scope="default" type="STRING"/>
@@ -20,11 +24,12 @@
                             <xform>
                                 <token>$1</token>
                                 <client_id>wso2-client</client_id>
-                                <client_secret>QWE3InQrvUYb7MTCZXL2aRhHCR894zTL</client_secret>
+                                <client_secret>$2</client_secret>
                             </xform>
                         </format>
                         <args>
                             <arg evaluator="xml" expression="get-property('BearerToken')"/>
+                            <arg evaluator="xml" expression="get-property('KEYCLOAK_CLIENT_SECRET')"/>
                         </args>
                     </payloadFactory>
                     <property name="messageType" scope="axis2" type="STRING" value="application/x-www-form-urlencoded"/>
@@ -43,7 +48,7 @@
                     </call>
                     <filter regex="true" source="json-eval($.active)">
                         <then>
-                            <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+                            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                             <call>
                                 <endpoint>
                                     <http method="get" uri-template="http://localhost:8000/api/index.php/products?limit=100">
@@ -63,7 +68,7 @@ for (var p = 0; p < products.length; p++) {
 }]]></script>
                             <!-- 2. Tra cứu khách hàng theo email -->
                             <property expression="get-property('CustomerEmail')" name="uri.var.custEmail" scope="default" type="STRING"/>
-                            <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+                            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                             <call>
                                 <endpoint>
                                     <http method="get" uri-template="http://localhost:8000/api/index.php/thirdparties?sqlfilters=(t.email:=:'{uri.var.custEmail}')">
@@ -78,20 +83,20 @@ for (var p = 0; p < products.length; p++) {
                                 </endpoint>
                             </call>
                             <script language="js"><![CDATA[var result = mc.getPayloadJSON();
-var socId = "";
-if (result && result.length && result.length > 0 && result[0].id) {
-    socId = result[0].id;
-}
-mc.setProperty("CustomerSocId", socId);]]></script>
+								var socId = "";
+								if (result && result.length && result.length > 0 && result[0].id) {
+								    socId = result[0].id;
+								}
+								mc.setProperty("CustomerSocId", socId);]]></script>
                             <!-- 3. Nếu chưa có khách hàng (socId rỗng) -> tạo mới -->
                             <filter regex="^$" source="get-property('CustomerSocId')">
                                 <then>
                                     <payloadFactory media-type="json">
                                         <format>
 											{
-											"name": "$1",
-											"email": "$2",
-											"client": 1
+												"name": "$1",
+												"email": "$2",
+												"client": 1
 											}
 										</format>
                                         <args>
@@ -99,7 +104,7 @@ mc.setProperty("CustomerSocId", socId);]]></script>
                                             <arg evaluator="xml" expression="get-property('CustomerEmail')"/>
                                         </args>
                                     </payloadFactory>
-                                    <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+                                    <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
                                     <call>
                                         <endpoint>
@@ -147,7 +152,7 @@ mc.setProperty("CustomerSocId", socId);]]></script>
                                 }
 
                                 mc.setPayloadJSON(dolibarrPayload);]]></script>
-                            <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+                            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                             <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
                             <call>
                                 <endpoint>
@@ -169,10 +174,10 @@ mc.setProperty("CustomerSocId", socId);]]></script>
                                     <payloadFactory media-type="json">
                                         <format>
 											{
-											"orderId": "$1",
-											"amount": "$2",
-											"orderInfo": "Thanh toan don hang $1",
-											"redirectUrl": "http://localhost:8290/api/v1/vnpay/return"
+												"orderId": "$1",
+												"amount": "$2",
+												"orderInfo": "Thanh toan don hang $1",
+												"redirectUrl": "http://localhost:8290/api/v1/vnpay/return"
 											}
 										</format>
                                         <args>
@@ -200,10 +205,10 @@ mc.setProperty("CustomerSocId", socId);]]></script>
                                             <payloadFactory media-type="json">
                                                 <format>
 													{
-													"status": "success",
-													"message": "Đã tạo đơn hàng và link thanh toán thành công.",
-													"dolibarr_order_id": "$1",
-													"payment_url": "$2"
+														"status": "success",
+														"message": "Đã tạo đơn hàng và link thanh toán thành công.",
+														"dolibarr_order_id": "$1",
+														"payment_url": "$2"
 													}
 												</format>
                                                 <args>

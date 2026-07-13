@@ -1,6 +1,6 @@
 openapi: 3.0.1
 info:
-  title: DirectusOrderAPI
+  title: OrderAPI
   description: API Definition of DirectusOrderAPI
   version: 1.0.0
 servers:

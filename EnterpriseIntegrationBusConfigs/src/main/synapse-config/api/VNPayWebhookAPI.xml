@@ -9,9 +9,12 @@
             <property expression="get-property('query.param.vnp_TxnRef')" name="uri.var.orderid" scope="default" type="STRING"/>
             <property expression="get-property('query.param.vnp_TxnRef')" name="DolibarrOrderID" scope="default" type="STRING"/>
             <property expression="get-property('query.param.vnp_ResponseCode')" name="ResultCode" scope="default" type="STRING"/>
+            <script language="js"><![CDATA[var dolibarrToken = java.lang.System.getenv('DOLIBARR_TOKEN');
+					    
+				mc.setProperty('DOLIBARR_TOKEN', dolibarrToken);]]></script>
             <filter regex="^00$" source="get-property('ResultCode')">
                 <then>
-                    <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+                    <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
                     <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
                     <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
@@ -33,7 +36,7 @@
                         <source clone="true" type="body"/>
                         <target property="DolibarrOrder" type="property"/>
                     </enrich>
-                    <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+                    <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
                     <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
                     <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
@@ -52,11 +55,6 @@
                     </call>
                     <property expression="json-eval($.name)" name="CustomerName" scope="default" type="STRING"/>
                     <property expression="json-eval($.email)" name="CustomerEmail" scope="default" type="STRING"/>
-                    <log level="custom">
-                        <property name="--- KIEM TRA DATA DOLIBARR TRA VE ---" value="======================="/>
-                        <property expression="get-property('CustomerName')" name="1_TEN_KHACH_HANG"/>
-                        <property expression="get-property('CustomerEmail')" name="2_EMAIL_KHACH_HANG"/>
-                    </log>
                     <payloadFactory media-type="json">
                         <format>
 							{
@@ -265,7 +263,7 @@
 						ref_ext -->
                     <header action="remove" name="Authorization" scope="transport"/>
                     <property action="remove" name="company" scope="transport"/>
-                    <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+                    <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                     <payloadFactory media-type="json">
                         <format>
 							{ "ref_ext": "INV-DL-$1" }
@@ -292,7 +290,7 @@
                     </call>
                     <!-- GỌI API VALIDATE ĐƠN HÀNG -> KÍCH HOẠT TRỪ KHO TỰ ĐỘNG -->
                     <header action="remove" name="Authorization" scope="transport"/>
-                    <property name="DOLAPIKEY" scope="transport" type="STRING" value="59352f3754484dc66e9fae32e834ce40c2ea218e"/>
+                    <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                     <payloadFactory media-type="json">
                         <format>
 							{ "idwarehouse": 1 }

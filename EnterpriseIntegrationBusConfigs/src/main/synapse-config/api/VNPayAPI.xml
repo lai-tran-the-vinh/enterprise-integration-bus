@@ -7,12 +7,18 @@
             <property expression="json-eval($.amount)" name="amount" scope="default" type="STRING"/>
             <property expression="json-eval($.orderInfo)" name="orderInfo" scope="default" type="STRING"/>
             <property expression="json-eval($.redirectUrl)" name="redirectUrl" scope="default" type="STRING"/>
+            <script language="js"><![CDATA[var vnpayHashSecret = java.lang.System.getenv('VNPAY_HASH_SECRET');
+			    var vnpayTmnCode = java.lang.System.getenv('VNPAY_TMN_CODE');
+			    var vnpayHashSecret = java.lang.System.getenv('VNPAY_HASH_SECRET');
+			    
+			    mc.setProperty('VNPAY_HASH_SECRET', vnpayHashSecret);
+			    mc.setProperty('VNPAY_TMN_CODE', vnpayTmnCode);]]></script>
             <!-- 2. Cấu hình -->
-            <property name="vnp_TmnCode" scope="default" type="STRING" value="ZERI53G9"/>
-            <property name="vnp_HashSecret" scope="default" type="STRING" value="14BD91DNB0D4YWYSQNRB5EFID0W0FOL1"/>
+            <property expression="get-property('VNPAY_TMN_CODE')" name="vnp_TmnCode" scope="default" type="STRING"/>
+            <property name="vnp_HashSecret" scope="default" type="STRING" value="get-property('VNPAY_HASH_SECRET')"/>
             <!-- 3. Tự động mã hóa SHA-512 và xây dựng liên kết VNPay bằng JS -->
-            <script language="js"><![CDATA[var tmnCode = mc.getProperty("vnp_TmnCode");
-                var secretKey = mc.getProperty("vnp_HashSecret");
+            <script language="js"><![CDATA[var tmnCode = mc.getProperty("VNPAY_TMN_CODE");
+                var secretKey = mc.getProperty("VNPAY_HASH_SECRET");
                 var orderId = mc.getProperty("orderId");
                 var amount = mc.getProperty("amount"); 
                 var orderInfo = mc.getProperty("orderInfo");
