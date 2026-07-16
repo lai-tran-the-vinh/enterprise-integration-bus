@@ -63,9 +63,9 @@
                                 </endpoint>
                             </call>
                             <script language="js"><![CDATA[var products = mc.getPayloadJSON();
-for (var p = 0; p < products.length; p++) {
-    mc.setProperty("Price_" + products[p].id, products[p].price);
-}]]></script>
+								for (var p = 0; p < products.length; p++) {
+								    mc.setProperty("Price_" + products[p].id, products[p].price);
+								}]]></script>
                             <!-- 2. Tra cứu khách hàng theo email -->
                             <property expression="get-property('CustomerEmail')" name="uri.var.custEmail" scope="default" type="STRING"/>
                             <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>

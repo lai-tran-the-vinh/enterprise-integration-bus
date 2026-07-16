@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api context="/api/v1/orders/track" name="TrackOrderAPI" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="POST" uri-template="/">
+        <inSequence>
+            <header action="remove" name="Cookie" scope="transport"/>
+            <header action="remove" name="Authorization" scope="transport"/>
+            <!-- 1. Lấy dữ liệu đầu vào -->
+            <property expression="json-eval($.order_id)" name="uri.var.InputOrderID" scope="default" type="STRING"/>
+            <property expression="json-eval($.email)" name="InputEmail" scope="default" type="STRING"/>
+            <!-- 2. CHỐT CHẶN 1: Kiểm tra rỗng và định dạng Email RFC 5322 -->
+            <script language="js"><![CDATA[var orderId = String(mc.getProperty("uri.var.InputOrderID") || "").trim();
+                var email = String(mc.getProperty("InputEmail") || "").trim();
+                
+                // Biểu thức chính quy kiểm tra email
+                var rfc5322Regex = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+                
+                if (orderId === "" || orderId === "null") {
+                    mc.setProperty("ERR_MSG", "Mã đơn hàng (order_id) không được để trống.");
+                    mc.setProperty("IS_VALID", "false");
+                } else if (email === "" || email === "null") {
+                    mc.setProperty("ERR_MSG", "Email không được để trống.");
+                    mc.setProperty("IS_VALID", "false");
+                } else if (!rfc5322Regex.test(email)) {
+                    mc.setProperty("ERR_MSG", "Địa chỉ email không tuân thủ định dạng chuẩn quốc tế RFC 5322.");
+                    mc.setProperty("IS_VALID", "false");
+                } else {
+                    mc.setProperty("IS_VALID", "true");
+                }]]></script>
+            <filter regex="false" source="get-property('IS_VALID')">
+                <then>
+                    <payloadFactory media-type="json">
+                        <format>{"status": "error", "message": "$1"}</format>
+                        <args>
+                            <arg evaluator="xml" expression="get-property('ERR_MSG')"/>
+                        </args>
+                    </payloadFactory>
+                    <property name="HTTP_SC" scope="axis2" type="STRING" value="400"/>
+                    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <respond/>
+                </then>
+                <else/>
+            </filter>
+            <!-- 3. Gọi Dolibarr tra cứu mã đơn hàng -->
+            <script language="js"><![CDATA[var dolibarrToken = java.lang.System.getenv('DOLIBARR_TOKEN');
+			    mc.setProperty('DOLIBARR_TOKEN', dolibarrToken);]]></script>
+            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+            <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+            <call>
+                <endpoint>
+                    <http method="get" uri-template="http://localhost:8000/api/index.php/orders/{uri.var.InputOrderID}">
+                        <suspendOnFailure>
+                            <initialDuration>-1</initialDuration>
+                            <progressionFactor>1</progressionFactor>
+                        </suspendOnFailure>
+                        <markForSuspension>
+                            <retriesBeforeSuspension>5</retriesBeforeSuspension>
+                        </markForSuspension>
+                    </http>
+                </endpoint>
+            </call>
+            <!-- ĐÃ SỬA: Lấy trực tiếp ID đơn hàng để kiểm tra tồn tại -->
+            <property expression="json-eval($.id)" name="DolibarrOrderID" scope="default" type="STRING"/>
+            <property expression="json-eval($.socid)" name="uri.var.DolibarrSocID" scope="default" type="STRING"/>
+            <property expression="json-eval($)" name="OrderData" scope="default" type="STRING"/>
+            <!-- CHỐT CHẶN 2: Kiểm tra ĐƠN HÀNG có thực sự tồn tại không qua ID -->
+            <filter regex="^$" source="get-property('DolibarrOrderID')">
+                <then>
+                    <payloadFactory media-type="json">
+                        <format>{"status": "error", "message": "Mã đơn hàng không tồn tại trên hệ thống!"}</format>
+                        <args/>
+                    </payloadFactory>
+                    <property name="HTTP_SC" scope="axis2" type="STRING" value="404"/>
+                    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <respond/>
+                </then>
+                <else/>
+            </filter>
+            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+            <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+            <!-- 4. Gọi Dolibarr lấy thông tin Khách hàng -->
+            <call>
+                <endpoint>
+                    <http method="get" uri-template="http://localhost:8000/api/index.php/thirdparties/{uri.var.DolibarrSocID}">
+                        <suspendOnFailure>
+                            <initialDuration>-1</initialDuration>
+                            <progressionFactor>1</progressionFactor>
+                        </suspendOnFailure>
+                        <markForSuspension>
+                            <retriesBeforeSuspension>5</retriesBeforeSuspension>
+                        </markForSuspension>
+                    </http>
+                </endpoint>
+            </call>
+            <property expression="json-eval($)" name="FullThirdPartyData" scope="default" type="STRING"/>
+            <property expression="json-eval($.email)" name="RealEmail" scope="default" type="STRING"/>
+            <!-- 5. Đối chiếu Email & Đánh giá trạng thái thanh toán -->
+            <script language="js"><![CDATA[var inputEmail = String(mc.getProperty("InputEmail") || "").toLowerCase().trim();
+                var realEmail = String(mc.getProperty("RealEmail") || "").toLowerCase().trim();
+                var order = JSON.parse(mc.getProperty("OrderData"));
+
+                if (inputEmail !== realEmail) {
+                    mc.setProperty("AUTH_FAIL", "true");
+                } else {
+                    mc.setProperty("AUTH_FAIL", "false");
+                    var isPaid = (order.billed == "1" || order.statut == "1" || order.statut == "2" || order.statut == "3");
+                    mc.setProperty("IS_PAID", isPaid ? "true" : "false");
+                    mc.setProperty("ORDER_ID_VAL", String(order.id));
+                    mc.setProperty("ORDER_REF", String(order.ref));
+                    mc.setProperty("ORDER_DATE", String(order.date_creation));
+                    mc.setProperty("ORDER_TOTAL", String(Math.round(Number(order.total_ttc || 0))));
+                    mc.setProperty("ORDER_LINES", JSON.stringify(order.lines));
+                }]]></script>
+            <!-- CHỐT CHẶN 3: Từ chối nếu Email không khớp -->
+            <filter regex="true" source="get-property('AUTH_FAIL')">
+                <then>
+                    <payloadFactory media-type="json">
+                        <format>{"status": "error", "message": "Email tra cứu không khớp với thông tin người đặt hàng!"}</format>
+                        <args/>
+                    </payloadFactory>
+                    <property name="HTTP_SC" scope="axis2" type="STRING" value="403"/>
+                    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <respond/>
+                </then>
+                <else/>
+            </filter>
+            <!-- 6. Nếu chưa thanh toán -> Gọi sang VNPayAPI để lấy link (Không trùng lặp code) -->
+            <filter regex="false" source="get-property('IS_PAID')">
+                <then>
+                    <header action="remove" name="Authorization" scope="transport"/>
+                    <payloadFactory media-type="json">
+                        <format>
+                            {
+                                "orderId": $1,
+                                "amount": $2,
+                                "orderInfo": "Thanh toan don hang $1",
+                                "redirectUrl": "http://localhost:8290/api/v1/vnpay/return"
+                            }
+                        </format>
+                        <args>
+                            <arg evaluator="xml" expression="get-property('ORDER_ID_VAL')"/>
+                            <arg evaluator="xml" expression="get-property('ORDER_TOTAL')"/>
+                            <arg evaluator="xml" expression="get-property('ORDER_REF')"/>
+                        </args>
+                    </payloadFactory>
+                    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="Content-Type" scope="transport" type="STRING" value="application/json"/>
+                    <call>
+                        <endpoint>
+                            <http method="post" uri-template="http://localhost:8290/api/v1/payments/vnpay">
+                                <suspendOnFailure>
+                                    <initialDuration>-1</initialDuration>
+                                    <progressionFactor>1</progressionFactor>
+                                </suspendOnFailure>
+                                <markForSuspension>
+                                    <retriesBeforeSuspension>5</retriesBeforeSuspension>
+                                </markForSuspension>
+                            </http>
+                        </endpoint>
+                    </call>
+                    <!-- Hứng URL thanh toán từ VNPayAPI trả về -->
+                    <property expression="json-eval($.payUrl)" name="GeneratedPayUrl" scope="default" type="STRING"/>
+                </then>
+                <else>
+                    <property name="GeneratedPayUrl" scope="default" type="STRING" value=""/>
+                </else>
+            </filter>
+            <!-- 7. Tổng hợp dữ liệu và trả về cho Khách hàng -->
+            <script language="js"><![CDATA[var isPaid = (String(mc.getProperty("IS_PAID") || "") == "true");
+                var payUrl = String(mc.getProperty("GeneratedPayUrl") || "");
+                var orderId = String(mc.getProperty("ORDER_ID_VAL") || "");
+                
+                var cleanUrl = payUrl;
+                var invoiceNum = isPaid ? ("INV-DL-" + orderId) : "";
+                
+                mc.setProperty("RES_STATUS_LABEL", isPaid ? "Đã thanh toán" : "Chưa thanh toán");
+                mc.setProperty("RES_CAN_PAY", isPaid ? "false" : "true");
+                mc.setProperty("RES_PAY_URL", cleanUrl);
+                mc.setProperty("RES_INVOICE", invoiceNum);]]></script>
+            <payloadFactory media-type="json">
+                <format>
+                    {
+                        "status": "success",
+                        "order": {
+                            "id": "$1",
+                            "ref": "$2",
+                            "date": "$3",
+                            "total": "$4",
+                            "status_label": "$5",
+                            "lines": $6
+                        },
+                        "actions": {
+                            "can_pay": $7,
+                            "pay_url": "$8",
+                            "invoice_number": "$9"
+                        }
+                    }
+                </format>
+                <args>
+                    <arg evaluator="xml" expression="get-property('ORDER_ID_VAL')"/>
+                    <arg evaluator="xml" expression="get-property('ORDER_REF')"/>
+                    <arg evaluator="xml" expression="get-property('ORDER_DATE')"/>
+                    <arg evaluator="xml" expression="get-property('ORDER_TOTAL')"/>
+                    <arg evaluator="xml" expression="get-property('RES_STATUS_LABEL')"/>
+                    <arg evaluator="xml" expression="get-property('ORDER_LINES')"/>
+                    <arg evaluator="xml" expression="get-property('RES_CAN_PAY')"/>
+                    <arg evaluator="xml" expression="get-property('RES_PAY_URL')"/>
+                    <arg evaluator="xml" expression="get-property('RES_INVOICE')"/>
+                </args>
+            </payloadFactory>
+            <header action="remove" name="Authorization" scope="transport"/>
+            <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+            <property name="HTTP_SC" scope="axis2" type="STRING" value="200"/>
+            <respond/>
+        </inSequence>
+        <outSequence/>
+        <faultSequence>
+            <payloadFactory media-type="json">
+                <format>{"error": "Internal Server Error", "details": "$1"}</format>
+                <args>
+                    <arg evaluator="xml" expression="get-property('ERROR_MESSAGE')"/>
+                </args>
+            </payloadFactory>
+            <property name="HTTP_SC" scope="axis2" type="STRING" value="500"/>
+            <respond/>
+        </faultSequence>
+    </resource>
+</api>

@@ -1,0 +1,13 @@
+openapi: 3.0.1
+info:
+  title: GetOrdersAPI
+  description: API Definition of GetOrdersAPI
+  version: 1.0.0
+servers:
+- url: http://localhost:8290/api/v1/orders-list
+paths:
+  /:
+    get:
+      responses:
+        default:
+          description: Default response
