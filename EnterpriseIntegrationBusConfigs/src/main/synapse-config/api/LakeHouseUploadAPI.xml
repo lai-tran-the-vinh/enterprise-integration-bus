@@ -10,7 +10,7 @@
             <property name="COPY_CONTENT_LENGTH_FROM_INCOMING" scope="axis2" type="STRING" value="true"/>
             <call>
                 <endpoint>
-                    <http method="post" uri-template="https://theft-perception-ancient-suggestions.trycloudflare.com/api/upload/">
+                    <http method="post" uri-template="https://luther-stuart-economies-struct.trycloudflare.com/api/upload/">
                         <suspendOnFailure>
                             <initialDuration>-1</initialDuration>
                             <progressionFactor>1</progressionFactor>

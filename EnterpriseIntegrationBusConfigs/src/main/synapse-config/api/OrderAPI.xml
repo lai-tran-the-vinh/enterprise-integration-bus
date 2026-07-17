@@ -6,6 +6,9 @@
             <property expression="json-eval($.customer_email)" name="CustomerEmail" scope="default" type="STRING"/>
             <property expression="json-eval($.amount)" name="OrderAmount" scope="default" type="STRING"/>
             <property expression="$trp:Authorization" name="AuthHeader" scope="default" type="STRING"/>
+            <log level="custom">
+                <property name="Bước 1" value="Nhận yêu cầu từ trang bán hàng"/>
+            </log>
             <enrich>
                 <source clone="true" type="body"/>
                 <target property="DirectusOriginalPayload" type="property"/>
@@ -32,6 +35,9 @@
                             <arg evaluator="xml" expression="get-property('KEYCLOAK_CLIENT_SECRET')"/>
                         </args>
                     </payloadFactory>
+                    <log level="custom">
+                        <property name="Bước 2" value="Xác thực token Keycloak"/>
+                    </log>
                     <property name="messageType" scope="axis2" type="STRING" value="application/x-www-form-urlencoded"/>
                     <call>
                         <endpoint>
@@ -152,6 +158,9 @@
                                 }
 
                                 mc.setPayloadJSON(dolibarrPayload);]]></script>
+                            <log level="custom">
+                                <property name="Bước 3" value="Tạo đơn hàng trên Dolibarr"/>
+                            </log>
                             <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                             <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
                             <call>
@@ -169,6 +178,9 @@
                             </call>
                             <property expression="fn:normalize-space($body//text())" name="DolibarrOrderID" scope="default" type="STRING"/>
                             <property expression="get-property('DolibarrOrderID')" name="uri.var.orderid" scope="default" type="STRING"/>
+                            <log level="custom">
+                                <property name="Bước 4" value="Gọi sang cổng thanh toán"/>
+                            </log>
                             <filter regex="^[0-9]+$" source="get-property('DolibarrOrderID')">
                                 <then>
                                     <payloadFactory media-type="json">

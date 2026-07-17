@@ -16,6 +16,7 @@
   <properties>
     <com.example.api_._GetProductAPI>capp/EnterpriseServiceBus</com.example.api_._GetProductAPI>
     <com.example.metadata_._LakeHouseUploadAPI_swagger>capp/EnterpriseServiceBus</com.example.metadata_._LakeHouseUploadAPI_swagger>
+    <com.example.metadata_._GetInvoiceByOrderIdAPI_metadata>capp/EnterpriseServiceBus</com.example.metadata_._GetInvoiceByOrderIdAPI_metadata>
     <com.example.metadata_._MomoWebhookAPI_metadata>capp/EnterpriseServiceBus</com.example.metadata_._MomoWebhookAPI_metadata>
     <com.example.metadata_._OrderAPI_swagger>capp/ApplicationServer</com.example.metadata_._OrderAPI_swagger>
     <com.example.api_._OrderAPI>capp/EnterpriseServiceBus</com.example.api_._OrderAPI>
@@ -25,6 +26,8 @@
     <com.example.metadata_._VNPayReturnAPI_swagger>capp/EnterpriseServiceBus</com.example.metadata_._VNPayReturnAPI_swagger>
     <com.example.metadata_._GetProductAPI_swagger>capp/EnterpriseServiceBus</com.example.metadata_._GetProductAPI_swagger>
     <com.example.metadata_._LakeHouseUploadAPI_metadata>capp/EnterpriseServiceBus</com.example.metadata_._LakeHouseUploadAPI_metadata>
+    <com.example.api_._GetInvoiceByOrderIdAPI>capp/EnterpriseServiceBus</com.example.api_._GetInvoiceByOrderIdAPI>
+    <com.example.metadata_._GetInvoiceByOrderIdAPI_swagger>capp/EnterpriseServiceBus</com.example.metadata_._GetInvoiceByOrderIdAPI_swagger>
     <com.example.api_._VNPayWebhookAPI>capp/EnterpriseServiceBus</com.example.api_._VNPayWebhookAPI>
     <com.example.api_._VNPayReturnAPI>capp/EnterpriseServiceBus</com.example.api_._VNPayReturnAPI>
     <com.example.api_._VNPayAPI>capp/EnterpriseServiceBus</com.example.api_._VNPayAPI>
@@ -45,6 +48,12 @@
     <dependency>
       <groupId>com.example.metadata</groupId>
       <artifactId>LakeHouseUploadAPI_swagger</artifactId>
+      <version>1.0.0</version>
+      <type>yaml</type>
+    </dependency>
+    <dependency>
+      <groupId>com.example.metadata</groupId>
+      <artifactId>GetInvoiceByOrderIdAPI_metadata</artifactId>
       <version>1.0.0</version>
       <type>yaml</type>
     </dependency>
@@ -99,6 +108,18 @@
     <dependency>
       <groupId>com.example.metadata</groupId>
       <artifactId>LakeHouseUploadAPI_metadata</artifactId>
+      <version>1.0.0</version>
+      <type>yaml</type>
+    </dependency>
+    <dependency>
+      <groupId>com.example.api</groupId>
+      <artifactId>GetInvoiceByOrderIdAPI</artifactId>
+      <version>1.0.0</version>
+      <type>xml</type>
+    </dependency>
+    <dependency>
+      <groupId>com.example.metadata</groupId>
+      <artifactId>GetInvoiceByOrderIdAPI_swagger</artifactId>
       <version>1.0.0</version>
       <type>yaml</type>
     </dependency>

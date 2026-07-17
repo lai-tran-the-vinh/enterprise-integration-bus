@@ -58,9 +58,9 @@
                     <payloadFactory media-type="json">
                         <format>
 							{
-							"username": "tvinh9130@gmail.com",
-							"password": "$The-Vinh-2004$",
-							"device_name": "wso2-webhook"
+								"username": "tvinh9130@gmail.com",
+								"password": "$The-Vinh-2004$",
+								"device_name": "wso2-webhook"
 							}
 						</format>
                         <args/>
@@ -175,12 +175,12 @@
                                 items.push({
                                     "name": itemName,
                                     "quantity": parseInt(line.qty),
-                                    "price": parseFloat(line.subprice),
+                                    "price": Math.round(parseFloat(line.subprice) * 100),
                                     "discount": 0,
                                     "discount_type": "fixed",
                                     "discount_val": 0,
                                     "tax": 0,
-                                    "total": lineTotal
+                                    "total": Math.round(lineTotal * 100)
                                 });
                             }
                         }
@@ -191,11 +191,11 @@
                             "customer_id": parseInt(mc.getProperty("ISCustomerId")),
                             "invoice_date": todayStr,
                             "due_date": todayStr,
-                            "sub_total": subTotal,
+                             "sub_total": Math.round(subTotal * 100),
                             "discount": 0,
                             "discount_val": 0,
                             "tax": 0,
-                            "total": subTotal,
+                            "total": Math.round(subTotal * 100),
                             "exchange_rate": 1,
                             "items": items
                         };

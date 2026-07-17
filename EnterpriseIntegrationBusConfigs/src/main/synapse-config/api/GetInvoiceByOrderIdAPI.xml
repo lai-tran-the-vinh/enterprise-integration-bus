@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api context="/api/v1/invoices" name="InvoiceDetailAPI" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="GET" uri-template="/{orderId}">
+        <inSequence>
+            <script language="js"><![CDATA[var dolibarrToken = java.lang.System.getenv('DOLIBARR_TOKEN');
+			    var invoiceshelfToken = java.lang.System.getenv('INVOICE_SHELF_TOKEN');
+			    mc.setProperty('DOLIBARR_TOKEN', dolibarrToken);
+			    mc.setProperty('INVOICE_SHELF_TOKEN', 'Bearer ' + invoiceshelfToken);]]></script>
+            <!-- 1. Cấu hình Token Dolibarr -->
+            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+            <property name="Accept" scope="transport" type="STRING" value="application/json"/>
+            <!-- 2. Gọi Dolibarr lấy thông tin đơn hàng -->
+            <call>
+                <endpoint>
+                    <http method="get" uri-template="http://localhost:8000/api/index.php/orders/{uri.var.orderId}">
+                        <suspendOnFailure>
+                            <initialDuration>-1</initialDuration>
+                            <progressionFactor>1</progressionFactor>
+                        </suspendOnFailure>
+                        <markForSuspension>
+                            <retriesBeforeSuspension>0</retriesBeforeSuspension>
+                        </markForSuspension>
+                    </http>
+                </endpoint>
+            </call>
+            <!-- 3. Kiểm tra HTTP Status từ Dolibarr -->
+            <filter regex="200" source="$axis2:HTTP_SC">
+                <then>
+                    <property expression="json-eval($.ref_ext)" name="InvoiceNumber" scope="default" type="STRING"/>
+                    <!-- Nếu không có ref_ext -> Chưa lập hóa đơn -> Trả lỗi 404 chuẩn -->
+                    <filter regex="^$" source="get-property('InvoiceNumber')">
+                        <then>
+                            <payloadFactory media-type="json">
+                                <format>{"status": "error", "message": "Hóa đơn chưa được khởi tạo cho đơn hàng này."}</format>
+                                <args/>
+                            </payloadFactory>
+                            <property name="HTTP_SC" scope="axis2" type="STRING" value="404"/>
+                            <respond/>
+                        </then>
+                        <else/>
+                    </filter>
+                    <!-- 4. Chuẩn bị gọi InvoiceShelf (Xóa token Dolibarr, thêm token InvoiceShelf) -->
+                    <property action="remove" name="DOLAPIKEY" scope="transport"/>
+                    <!-- LƯU Ý: Thay đúng Token Bearer InvoiceShelf của bạn vào ô value bên dưới -->
+                    <property expression="get-property('INVOICE_SHELF_TOKEN')" name="Authorization" scope="transport" type="STRING"/>
+                    <property name="Accept" scope="transport" type="STRING" value="application/json"/>
+                    <!-- Gọi InvoiceShelf với đúng tham số invoice_number= -->
+                    <call>
+                        <endpoint>
+                            <http method="get" uri-template="http://localhost:8002/api/v1/invoices?invoice_number={uri.var.InvoiceNumber}">
+                                <suspendOnFailure>
+                                    <initialDuration>-1</initialDuration>
+                                    <progressionFactor>1</progressionFactor>
+                                </suspendOnFailure>
+                                <markForSuspension>
+                                    <retriesBeforeSuspension>0</retriesBeforeSuspension>
+                                </markForSuspension>
+                            </http>
+                        </endpoint>
+                    </call>
+                    <!-- 5. Kiểm tra kết quả từ InvoiceShelf -->
+                    <filter regex="200" source="$axis2:HTTP_SC">
+                        <then>
+                            <script language="js"><![CDATA[var res = mc.getPayloadJSON();
+                        var invoice = (Array.isArray(res.data)) ? res.data[0] : res.data;
+
+                        // Chỉ khi lấy được invoice và có ID mới là thành công
+                        if (invoice && invoice.id) {
+                            var subTotalReal = parseFloat(invoice.sub_total || 0) / 100;
+                            var totalReal = parseFloat(invoice.total || 0) / 100;
+
+                            function formatVND(num) {
+                                return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " đ";
+                            }
+
+                            invoice.sub_total_display = formatVND(subTotalReal);
+                            invoice.total_display = formatVND(totalReal);
+
+                            mc.setProperty("ERROR_MSG", "");
+                            mc.setPayloadJSON(invoice);
+                        } else {
+                            mc.setProperty("ERROR_MSG", "Không tìm thấy dữ liệu hóa đơn trên hệ thống.");
+                            mc.setProperty("ERROR_CODE", "404");
+                        }]]></script>
+                            <!-- 6. Phân luồng: Nếu ERROR_MSG có chữ -> Báo lỗi. Nếu rỗng -> Trả hóa đơn -->
+                            <filter regex=".+" source="get-property('ERROR_MSG')">
+                                <then>
+                                    <payloadFactory media-type="json">
+                                        <format>{"status": "error", "message": "$1"}</format>
+                                        <args>
+                                            <arg evaluator="xml" expression="get-property('ERROR_MSG')"/>
+                                        </args>
+                                    </payloadFactory>
+                                    <property expression="get-property('ERROR_CODE')" name="HTTP_SC" scope="axis2" type="STRING"/>
+                                    <respond/>
+                                </then>
+                                <else>
+                                    <respond/>
+                                </else>
+                            </filter>
+                        </then>
+                        <else>
+                            <payloadFactory media-type="json">
+                                <format>{"status": "error", "message": "Dịch vụ hóa đơn đang tạm ngắt kết nối."}</format>
+                                <args/>
+                            </payloadFactory>
+                            <property name="HTTP_SC" scope="axis2" type="STRING" value="503"/>
+                            <respond/>
+                        </else>
+                    </filter>
+                </then>
+                <else>
+                    <payloadFactory media-type="json">
+                        <format>{"status": "error", "message": "Đơn hàng không tồn tại."}</format>
+                        <args/>
+                    </payloadFactory>
+                    <property name="HTTP_SC" scope="axis2" type="STRING" value="404"/>
+                    <respond/>
+                </else>
+            </filter>
+        </inSequence>
+        <outSequence/>
+        <faultSequence>
+            <payloadFactory media-type="json">
+                <format>{"status": "error", "message": "Hệ thống xảy ra lỗi nghiêm trọng."}</format>
+                <args/>
+            </payloadFactory>
+            <property name="HTTP_SC" scope="axis2" type="STRING" value="500"/>
+            <respond/>
+        </faultSequence>
+    </resource>
+</api>
