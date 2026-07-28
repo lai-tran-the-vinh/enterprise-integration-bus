@@ -101,6 +101,9 @@
                 };
                 
                 mc.setPayloadJSON(payload);]]></script>
+            <log level="custom">
+                <property name="Bước 5" value="Tạo link thanh toán thành công"/>
+            </log>
             <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
             <respond/>
         </inSequence>

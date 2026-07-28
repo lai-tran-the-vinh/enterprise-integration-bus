@@ -129,7 +129,7 @@
                                 </then>
                                 <else/>
                             </filter>
-                            <!-- 4. Khôi phục payload gốc từ Directus để đọc products -->
+                            <!-- 4. Khôi phục payload gốc để đọc products -->
                             <enrich>
                                 <source clone="true" property="DirectusOriginalPayload" type="property"/>
                                 <target type="body"/>

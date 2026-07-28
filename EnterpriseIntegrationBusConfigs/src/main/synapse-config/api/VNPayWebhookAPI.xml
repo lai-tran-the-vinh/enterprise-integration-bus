@@ -89,6 +89,9 @@
                     <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
                     <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
                     <property name="Accept" scope="transport" type="STRING" value="application/json"/>
+                    <log level="custom">
+                        <property name="Bước 7" value="InvoiceShelf tạo hóa đơn"/>
+                    </log>
                     <call>
                         <endpoint>
                             <http method="get" uri-template="http://localhost:8002/api/v1/customers?search={uri.var.custEmail}&amp;limit=100">
