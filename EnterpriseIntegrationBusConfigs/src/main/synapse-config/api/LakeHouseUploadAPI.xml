@@ -8,9 +8,10 @@
             <header expression="get-property('OriginalContentType')" name="Content-Type" scope="transport"/>
             <property name="DISABLE_CHUNKING" scope="axis2" type="STRING" value="true"/>
             <property name="COPY_CONTENT_LENGTH_FROM_INCOMING" scope="axis2" type="STRING" value="true"/>
+            <property expression="get-property('env', 'LAKE_HOUSE_BASE_URL')" name="uri.var.lake_house_url" scope="default" type="STRING"/>
             <call>
                 <endpoint>
-                    <http method="post" uri-template="https://luther-stuart-economies-struct.trycloudflare.com/api/upload/">
+                    <http method="post" uri-template="{uri.var.lake_house_url}/api/upload/">
                         <suspendOnFailure>
                             <initialDuration>-1</initialDuration>
                             <progressionFactor>1</progressionFactor>

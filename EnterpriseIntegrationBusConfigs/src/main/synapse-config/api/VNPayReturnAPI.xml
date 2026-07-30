@@ -6,12 +6,14 @@
             <property expression="get-property('query.param.vnp_ResponseCode')" name="uri.var.code" scope="default" type="STRING"/>
             <property action="remove" name="REST_URL_POSTFIX" scope="axis2"/>
             <property action="remove" name="NO_ENTITY_BODY" scope="axis2"/>
+            <property expression="get-property('env', 'WSO2_BASE_URL')" name="uri.var.wso2_url" scope="default" type="STRING"/>
+            <property expression="get-property('env', 'EXPRESS_APP_BASE_URL')" name="uri.var.express_app_url" scope="default" type="STRING"/>
             <log level="custom">
                 <property name="Bước 6" value="Thanh toán thành công, gọi webhook"/>
             </log>
             <call>
                 <endpoint>
-                    <http method="get" uri-template="http://localhost:8290/api/v1/webhook/vnpay?vnp_TxnRef={uri.var.ref}&amp;vnp_ResponseCode={uri.var.code}">
+                    <http method="get" uri-template="{uri.var.wso2_url}/api/v1/webhook/vnpay?vnp_TxnRef={uri.var.ref}&amp;vnp_ResponseCode={uri.var.code}">
                         <suspendOnFailure>
                             <initialDuration>-1</initialDuration>
                             <progressionFactor>1</progressionFactor>
@@ -23,7 +25,7 @@
                 </endpoint>
             </call>
             <property name="HTTP_SC" scope="axis2" type="STRING" value="302"/>
-            <header expression="fn:concat('http://localhost:3000/order-result?orderId=', get-property('uri.var.ref'), '&amp;status=success')" name="Location" scope="transport"/>
+            <header expression="fn:concat(get-property('uri.var.express_app_url'), '/order-result?orderId=', get-property('uri.var.ref'), '&amp;status=success')" name="Location" scope="transport"/>
             <respond/>
         </inSequence>
         <outSequence/>

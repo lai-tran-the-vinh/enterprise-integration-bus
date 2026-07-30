@@ -4,6 +4,8 @@
         <inSequence>
             <header action="remove" name="Cookie" scope="transport"/>
             <header action="remove" name="Authorization" scope="transport"/>
+            <property expression="get-property('env', 'WSO2_BASE_URL')" name="uri.var.wso2_url" scope="default" type="STRING"/>
+            <property expression="get-property('env', 'DOLIBARR_BASE_URL')" name="uri.var.dolibarr_url" scope="default" type="STRING"/>
             <!-- 1. Lấy dữ liệu đầu vào -->
             <property expression="json-eval($.order_id)" name="uri.var.InputOrderID" scope="default" type="STRING"/>
             <property expression="json-eval($.email)" name="InputEmail" scope="default" type="STRING"/>
@@ -41,13 +43,11 @@
                 <else/>
             </filter>
             <!-- 3. Gọi Dolibarr tra cứu mã đơn hàng -->
-            <script language="js"><![CDATA[var dolibarrToken = java.lang.System.getenv('DOLIBARR_TOKEN');
-			    mc.setProperty('DOLIBARR_TOKEN', dolibarrToken);]]></script>
-            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+            <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
             <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
             <call>
                 <endpoint>
-                    <http method="get" uri-template="http://localhost:8000/api/index.php/orders/{uri.var.InputOrderID}">
+                    <http method="get" uri-template="{uri.var.dolibarr_url}/api/index.php/orders/{uri.var.InputOrderID}">
                         <suspendOnFailure>
                             <initialDuration>-1</initialDuration>
                             <progressionFactor>1</progressionFactor>
@@ -75,12 +75,12 @@
                 </then>
                 <else/>
             </filter>
-            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+            <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
             <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
             <!-- 4. Gọi Dolibarr lấy thông tin Khách hàng -->
             <call>
                 <endpoint>
-                    <http method="get" uri-template="http://localhost:8000/api/index.php/thirdparties/{uri.var.DolibarrSocID}">
+                    <http method="get" uri-template="{uri.var.dolibarr_url}/api/index.php/thirdparties/{uri.var.DolibarrSocID}">
                         <suspendOnFailure>
                             <initialDuration>-1</initialDuration>
                             <progressionFactor>1</progressionFactor>
@@ -133,7 +133,7 @@
                                 "orderId": $1,
                                 "amount": $2,
                                 "orderInfo": "Thanh toan don hang $1",
-                                "redirectUrl": "http://localhost:8290/api/v1/vnpay/return"
+                                "redirectUrl": "{uri.var.wso2_url}/api/v1/vnpay/return"
                             }
                         </format>
                         <args>
@@ -146,7 +146,7 @@
                     <property name="Content-Type" scope="transport" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
-                            <http method="post" uri-template="http://localhost:8290/api/v1/payments/vnpay">
+                            <http method="post" uri-template="{uri.var.wso2_url}/api/v1/payments/vnpay">
                                 <suspendOnFailure>
                                     <initialDuration>-1</initialDuration>
                                     <progressionFactor>1</progressionFactor>

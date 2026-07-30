@@ -4,15 +4,13 @@
         <inSequence>
             <header action="remove" name="Cookie" scope="transport"/>
             <header action="remove" name="Authorization" scope="transport"/>
-            <script language="js"><![CDATA[var token = java.lang.System.getenv('DOLIBARR_TOKEN');
-			    
-			    mc.setProperty('DOLIBARR_TOKEN', token);]]></script>
-            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+            <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
             <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
             <property name="Accept" scope="transport" type="STRING" value="application/json"/>
+            <property expression="get-property('env', 'DOLIBARR_BASE_URL')" name="uri.var.dolibarr_url" scope="default" type="STRING"/>
             <call>
                 <endpoint>
-                    <http method="get" uri-template="http://localhost:8000/api/index.php/products?limit=100&amp;sortfield=t.ref&amp;sortorder=ASC">
+                    <http method="get" uri-template="{uri.var.dolibarr_url}/api/index.php/products?limit=100&amp;sortfield=t.ref&amp;sortorder=ASC">
                         <suspendOnFailure>
                             <initialDuration>-1</initialDuration>
                             <progressionFactor>1</progressionFactor>

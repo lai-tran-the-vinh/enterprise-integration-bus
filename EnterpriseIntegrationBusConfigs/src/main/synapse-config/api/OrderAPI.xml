@@ -13,11 +13,12 @@
                 <source clone="true" type="body"/>
                 <target property="DirectusOriginalPayload" type="property"/>
             </enrich>
-            <script language="js"><![CDATA[var secret = java.lang.System.getenv('KEYCLOAK_CLIENT_SECRET');
-			    var dolibarrToken = java.lang.System.getenv('DOLIBARR_TOKEN');
-			    
-			    mc.setProperty('KEYCLOAK_CLIENT_SECRET', secret);
-			    mc.setProperty('DOLIBARR_TOKEN', dolibarrToken);]]></script>
+            <property expression="get-property('env', 'KEYCLOAK_CLIENT_SECRET')" name="KEYCLOAK_CLIENT_SECRET" scope="default" type="STRING"/>
+            <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLIBARR_TOKEN" scope="default" type="STRING"/>
+            <!-- Đây phải không? -->
+            <property expression="get-property('env', 'KEYCLOAK_BASE_URL')" name="uri.var.keycloak_url" scope="default" type="STRING"/>
+            <property expression="get-property('env', 'DOLIBARR_BASE_URL')" name="uri.var.dolibarr_url" scope="default" type="STRING"/>
+            <property expression="get-property('env', 'WSO2_BASE_URL')" name="uri.var.wso2_url" scope="default" type="STRING"/>
             <filter regex="^Bearer .+" source="get-property('AuthHeader')">
                 <then>
                     <property expression="fn:substring-after(get-property('AuthHeader'), 'Bearer ')" name="BearerToken" scope="default" type="STRING"/>
@@ -32,7 +33,7 @@
                         </format>
                         <args>
                             <arg evaluator="xml" expression="get-property('BearerToken')"/>
-                            <arg evaluator="xml" expression="get-property('KEYCLOAK_CLIENT_SECRET')"/>
+                            <arg evaluator="xml" expression="get-property('env', 'KEYCLOAK_CLIENT_SECRET')"/>
                         </args>
                     </payloadFactory>
                     <log level="custom">
@@ -41,7 +42,7 @@
                     <property name="messageType" scope="axis2" type="STRING" value="application/x-www-form-urlencoded"/>
                     <call>
                         <endpoint>
-                            <http method="post" uri-template="http://localhost:8080/realms/WSO2-Realm/protocol/openid-connect/token/introspect">
+                            <http method="post" uri-template="{uri.var.keycloak_url}/realms/WSO2-Realm/protocol/openid-connect/token/introspect">
                                 <suspendOnFailure>
                                     <initialDuration>-1</initialDuration>
                                     <progressionFactor>1</progressionFactor>
@@ -54,10 +55,10 @@
                     </call>
                     <filter regex="true" source="json-eval($.active)">
                         <then>
-                            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+                            <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                             <call>
                                 <endpoint>
-                                    <http method="get" uri-template="http://localhost:8000/api/index.php/products?limit=100">
+                                    <http method="get" uri-template="{uri.var.dolibarr_url}/api/index.php/products?limit=100">
                                         <suspendOnFailure>
                                             <initialDuration>-1</initialDuration>
                                             <progressionFactor>1</progressionFactor>
@@ -74,10 +75,10 @@
 								}]]></script>
                             <!-- 2. Tra cứu khách hàng theo email -->
                             <property expression="get-property('CustomerEmail')" name="uri.var.custEmail" scope="default" type="STRING"/>
-                            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+                            <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                             <call>
                                 <endpoint>
-                                    <http method="get" uri-template="http://localhost:8000/api/index.php/thirdparties?sqlfilters=(t.email:=:'{uri.var.custEmail}')">
+                                    <http method="get" uri-template="{uri.var.dolibarr_url}/api/index.php/thirdparties?sqlfilters=(t.email:=:'{uri.var.custEmail}')">
                                         <suspendOnFailure>
                                             <initialDuration>-1</initialDuration>
                                             <progressionFactor>1</progressionFactor>
@@ -110,11 +111,11 @@
                                             <arg evaluator="xml" expression="get-property('CustomerEmail')"/>
                                         </args>
                                     </payloadFactory>
-                                    <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+                                    <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
                                     <call>
                                         <endpoint>
-                                            <http method="post" uri-template="http://localhost:8000/api/index.php/thirdparties">
+                                            <http method="post" uri-template="{uri.var.dolibarr_url}/api/index.php/thirdparties">
                                                 <suspendOnFailure>
                                                     <initialDuration>-1</initialDuration>
                                                     <progressionFactor>1</progressionFactor>
@@ -161,11 +162,11 @@
                             <log level="custom">
                                 <property name="Bước 3" value="Tạo đơn hàng trên Dolibarr"/>
                             </log>
-                            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+                            <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                             <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
                             <call>
                                 <endpoint>
-                                    <http method="post" uri-template="http://localhost:8000/api/index.php/orders">
+                                    <http method="post" uri-template="{uri.var.dolibarr_url}/api/index.php/orders">
                                         <suspendOnFailure>
                                             <initialDuration>-1</initialDuration>
                                             <progressionFactor>1</progressionFactor>
@@ -189,7 +190,7 @@
 												"orderId": "$1",
 												"amount": "$2",
 												"orderInfo": "Thanh toan don hang $1",
-												"redirectUrl": "http://localhost:8290/api/v1/vnpay/return"
+												"redirectUrl": "{uri.var.wso2_url}/api/v1/vnpay/return"
 											}
 										</format>
                                         <args>
@@ -200,7 +201,7 @@
                                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
                                     <call>
                                         <endpoint>
-                                            <http method="post" uri-template="http://localhost:8290/api/v1/payments/vnpay">
+                                            <http method="post" uri-template="{uri.var.wso2_url}/api/v1/payments/vnpay">
                                                 <suspendOnFailure>
                                                     <initialDuration>-1</initialDuration>
                                                     <progressionFactor>1</progressionFactor>
@@ -237,7 +238,7 @@
 													"status": "error",
 													"message": "Không thể tạo link thanh toán VNPay. Vui lòng thử lại sau."
 													}
-												</format>
+							</format>
                                                 <args/>
                                             </payloadFactory>
                                             <property name="HTTP_SC" scope="axis2" type="STRING" value="500"/>

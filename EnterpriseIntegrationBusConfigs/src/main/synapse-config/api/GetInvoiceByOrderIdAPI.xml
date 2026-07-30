@@ -2,17 +2,16 @@
 <api context="/api/v1/invoices" name="InvoiceDetailAPI" xmlns="http://ws.apache.org/ns/synapse">
     <resource methods="GET" uri-template="/{orderId}">
         <inSequence>
-            <script language="js"><![CDATA[var dolibarrToken = java.lang.System.getenv('DOLIBARR_TOKEN');
-			    var invoiceshelfToken = java.lang.System.getenv('INVOICE_SHELF_TOKEN');
-			    mc.setProperty('DOLIBARR_TOKEN', dolibarrToken);
-			    mc.setProperty('INVOICE_SHELF_TOKEN', 'Bearer ' + invoiceshelfToken);]]></script>
+            <property expression="fn:concat('Bearer ', get-property('env', 'INVOICE_SHELF_TOKEN'))" name="INVOICE_SHELF_TOKEN" scope="default" type="STRING"/>
             <!-- 1. Cấu hình Token Dolibarr -->
-            <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+            <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+            <property expression="get-property('env', 'DOLIBARR_BASE_URL')" name="uri.var.dolibarr_url" scope="default" type="STRING"/>
+            <property expression="get-property('env', 'INVOICE_SHELF_BASE_URL')" name="uri.var.invoice_shelf_url" scope="default" type="STRING"/>
             <property name="Accept" scope="transport" type="STRING" value="application/json"/>
             <!-- 2. Gọi Dolibarr lấy thông tin đơn hàng -->
             <call>
                 <endpoint>
-                    <http method="get" uri-template="http://localhost:8000/api/index.php/orders/{uri.var.orderId}">
+                    <http method="get" uri-template="{uri.var.dolibarr_url}/api/index.php/orders/{uri.var.orderId}">
                         <suspendOnFailure>
                             <initialDuration>-1</initialDuration>
                             <progressionFactor>1</progressionFactor>
@@ -42,12 +41,12 @@
                     <!-- 4. Chuẩn bị gọi InvoiceShelf (Xóa token Dolibarr, thêm token InvoiceShelf) -->
                     <property action="remove" name="DOLAPIKEY" scope="transport"/>
                     <!-- LƯU Ý: Thay đúng Token Bearer InvoiceShelf của bạn vào ô value bên dưới -->
-                    <property expression="get-property('INVOICE_SHELF_TOKEN')" name="Authorization" scope="transport" type="STRING"/>
+                    <property expression="get-property('env', 'INVOICE_SHELF_TOKEN')" name="Authorization" scope="transport" type="STRING"/>
                     <property name="Accept" scope="transport" type="STRING" value="application/json"/>
                     <!-- Gọi InvoiceShelf với đúng tham số invoice_number= -->
                     <call>
                         <endpoint>
-                            <http method="get" uri-template="http://localhost:8002/api/v1/invoices?invoice_number={uri.var.InvoiceNumber}">
+                            <http method="get" uri-template="{uri.var.invoice_shelf_url}/api/v1/invoices?invoice_number={uri.var.InvoiceNumber}">
                                 <suspendOnFailure>
                                     <initialDuration>-1</initialDuration>
                                     <progressionFactor>1</progressionFactor>

@@ -9,18 +9,17 @@
             <property expression="get-property('query.param.vnp_TxnRef')" name="uri.var.orderid" scope="default" type="STRING"/>
             <property expression="get-property('query.param.vnp_TxnRef')" name="DolibarrOrderID" scope="default" type="STRING"/>
             <property expression="get-property('query.param.vnp_ResponseCode')" name="ResultCode" scope="default" type="STRING"/>
-            <script language="js"><![CDATA[var dolibarrToken = java.lang.System.getenv('DOLIBARR_TOKEN');
-					    
-				mc.setProperty('DOLIBARR_TOKEN', dolibarrToken);]]></script>
+            <property expression="get-property('env', 'DOLIBARR_BASE_URL')" name="uri.var.dolibarr_url" scope="default" type="STRING"/>
+            <property expression="get-property('env', 'INVOICE_SHELF_BASE_URL')" name="uri.var.invoice_shelf_url" scope="default" type="STRING"/>
             <filter regex="^00$" source="get-property('ResultCode')">
                 <then>
-                    <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+                    <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
                     <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
                     <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
-                            <http method="get" uri-template="http://localhost:8000/api/index.php/orders/{uri.var.orderid}">
+                            <http method="get" uri-template="{uri.var.dolibarr_url}/api/index.php/orders/{uri.var.orderid}">
                                 <suspendOnFailure>
                                     <initialDuration>-1</initialDuration>
                                     <progressionFactor>1</progressionFactor>
@@ -36,13 +35,13 @@
                         <source clone="true" type="body"/>
                         <target property="DolibarrOrder" type="property"/>
                     </enrich>
-                    <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+                    <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
                     <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
                     <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
-                            <http method="get" uri-template="http://localhost:8000/api/index.php/thirdparties/{uri.var.socid}">
+                            <http method="get" uri-template="{uri.var.dolibarr_url}/api/index.php/thirdparties/{uri.var.socid}">
                                 <suspendOnFailure>
                                     <initialDuration>-1</initialDuration>
                                     <progressionFactor>1</progressionFactor>
@@ -57,20 +56,23 @@
                     <property expression="json-eval($.email)" name="CustomerEmail" scope="default" type="STRING"/>
                     <payloadFactory media-type="json">
                         <format>
-							{
-								"username": "tvinh9130@gmail.com",
-								"password": "$The-Vinh-2004$",
-								"device_name": "wso2-webhook"
-							}
-						</format>
-                        <args/>
+					        {
+					            "username": "$1",
+					            "password": "$2",
+					            "device_name": "wso2-webhook"
+					        }
+					    </format>
+                        <args>
+                            <arg evaluator="xml" expression="get-property('env', 'INVOICE_SHELF_USER')"/>
+                            <arg evaluator="xml" expression="get-property('env', 'INVOICE_SHELF_PASSWORD')"/>
+                        </args>
                     </payloadFactory>
                     <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
                     <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
                     <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
-                            <http method="post" uri-template="http://localhost:8002/api/v1/auth/login">
+                            <http method="post" uri-template="{uri.var.invoice_shelf_url}/api/v1/auth/login">
                                 <suspendOnFailure>
                                     <initialDuration>-1</initialDuration>
                                     <progressionFactor>1</progressionFactor>
@@ -94,7 +96,7 @@
                     </log>
                     <call>
                         <endpoint>
-                            <http method="get" uri-template="http://localhost:8002/api/v1/customers?search={uri.var.custEmail}&amp;limit=100">
+                            <http method="get" uri-template="{uri.var.invoice_shelf_url}/api/v1/customers?search={uri.var.custEmail}&amp;limit=100">
                                 <suspendOnFailure>
                                     <initialDuration>-1</initialDuration>
                                     <progressionFactor>1</progressionFactor>
@@ -141,7 +143,7 @@
                             <property name="Accept" scope="transport" type="STRING" value="application/json"/>
                             <call>
                                 <endpoint>
-                                    <http method="post" uri-template="http://localhost:8002/api/v1/customers">
+                                    <http method="post" uri-template="{uri.var.invoice_shelf_url}/api/v1/customers">
                                         <suspendOnFailure>
                                             <initialDuration>-1</initialDuration>
                                             <progressionFactor>1</progressionFactor>
@@ -211,7 +213,7 @@
                     <property name="Accept" scope="transport" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
-                            <http method="post" uri-template="http://localhost:8002/api/v1/invoices">
+                            <http method="post" uri-template="{uri.var.invoice_shelf_url}/api/v1/invoices">
                                 <suspendOnFailure>
                                     <initialDuration>-1</initialDuration>
                                     <progressionFactor>1</progressionFactor>
@@ -251,7 +253,7 @@
                     <property name="Accept" scope="transport" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
-                            <http method="post" uri-template="http://localhost:8002/api/v1/payments">
+                            <http method="post" uri-template="{uri.var.invoice_shelf_url}/api/v1/payments">
                                 <suspendOnFailure>
                                     <initialDuration>-1</initialDuration>
                                     <progressionFactor>1</progressionFactor>
@@ -280,7 +282,7 @@
                     <property name="FORCE_HTTP_CONTENT_TYPE" scope="axis2" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
-                            <http method="put" uri-template="http://localhost:8000/api/index.php/orders/{uri.var.orderid}">
+                            <http method="put" uri-template="{uri.var.dolibarr_url}/api/index.php/orders/{uri.var.orderid}">
                                 <suspendOnFailure>
                                     <initialDuration>-1</initialDuration>
                                     <progressionFactor>1</progressionFactor>
@@ -293,7 +295,7 @@
                     </call>
                     <!-- GỌI API VALIDATE ĐƠN HÀNG -> KÍCH HOẠT TRỪ KHO TỰ ĐỘNG -->
                     <header action="remove" name="Authorization" scope="transport"/>
-                    <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+                    <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                     <payloadFactory media-type="json">
                         <format>
 							{ "idwarehouse": 1 }
@@ -304,7 +306,7 @@
                     <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
                     <call>
                         <endpoint>
-                            <http method="post" uri-template="http://localhost:8000/api/index.php/orders/{uri.var.orderid}/validate">
+                            <http method="post" uri-template="{uri.var.dolibarr_url}/api/index.php/orders/{uri.var.orderid}/validate">
                                 <suspendOnFailure>
                                     <initialDuration>-1</initialDuration>
                                     <progressionFactor>1</progressionFactor>

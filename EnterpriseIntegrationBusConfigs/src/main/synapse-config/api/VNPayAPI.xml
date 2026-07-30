@@ -7,15 +7,8 @@
             <property expression="json-eval($.amount)" name="amount" scope="default" type="STRING"/>
             <property expression="json-eval($.orderInfo)" name="orderInfo" scope="default" type="STRING"/>
             <property expression="json-eval($.redirectUrl)" name="redirectUrl" scope="default" type="STRING"/>
-            <script language="js"><![CDATA[var vnpayHashSecret = java.lang.System.getenv('VNPAY_HASH_SECRET');
-			    var vnpayTmnCode = java.lang.System.getenv('VNPAY_TMN_CODE');
-			    var vnpayHashSecret = java.lang.System.getenv('VNPAY_HASH_SECRET');
-			    
-			    mc.setProperty('VNPAY_HASH_SECRET', vnpayHashSecret);
-			    mc.setProperty('VNPAY_TMN_CODE', vnpayTmnCode);]]></script>
-            <!-- 2. Cấu hình -->
-            <property expression="get-property('VNPAY_TMN_CODE')" name="vnp_TmnCode" scope="default" type="STRING"/>
-            <property name="vnp_HashSecret" scope="default" type="STRING" value="get-property('VNPAY_HASH_SECRET')"/>
+            <property expression="get-property('env', 'VNPAY_TMN_CODE')" name="VNPAY_TMN_CODE" scope="default" type="STRING"/>
+            <property expression="get-property('env', 'VNPAY_HASH_SECRET')" name="VNPAY_HASH_SECRET" scope="default" type="STRING"/>
             <!-- 3. Tự động mã hóa SHA-512 và xây dựng liên kết VNPay bằng JS -->
             <script language="js"><![CDATA[var tmnCode = mc.getProperty("VNPAY_TMN_CODE");
                 var secretKey = mc.getProperty("VNPAY_HASH_SECRET");
