@@ -268,7 +268,7 @@
 						ref_ext -->
                     <header action="remove" name="Authorization" scope="transport"/>
                     <property action="remove" name="company" scope="transport"/>
-                    <property expression="get-property('DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+                    <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                     <payloadFactory media-type="json">
                         <format>
 							{ "ref_ext": "INV-DL-$1" }

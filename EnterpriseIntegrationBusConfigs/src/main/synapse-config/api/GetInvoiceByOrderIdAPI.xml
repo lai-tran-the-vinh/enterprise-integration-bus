@@ -41,9 +41,10 @@
                     <!-- 4. Chuẩn bị gọi InvoiceShelf (Xóa token Dolibarr, thêm token InvoiceShelf) -->
                     <property action="remove" name="DOLAPIKEY" scope="transport"/>
                     <!-- LƯU Ý: Thay đúng Token Bearer InvoiceShelf của bạn vào ô value bên dưới -->
-                    <property expression="get-property('env', 'INVOICE_SHELF_TOKEN')" name="Authorization" scope="transport" type="STRING"/>
+                    <property expression="get-property('INVOICE_SHELF_TOKEN')" name="Authorization" scope="transport" type="STRING"/>
                     <property name="Accept" scope="transport" type="STRING" value="application/json"/>
                     <!-- Gọi InvoiceShelf với đúng tham số invoice_number= -->
+                    <property expression="get-property('InvoiceNumber')" name="uri.var.InvoiceNumber" scope="default" type="STRING"/>
                     <call>
                         <endpoint>
                             <http method="get" uri-template="{uri.var.invoice_shelf_url}/api/v1/invoices?invoice_number={uri.var.InvoiceNumber}">
@@ -57,6 +58,7 @@
                             </http>
                         </endpoint>
                     </call>
+                    <log level="full"/>
                     <!-- 5. Kiểm tra kết quả từ InvoiceShelf -->
                     <filter regex="200" source="$axis2:HTTP_SC">
                         <then>
@@ -65,6 +67,11 @@
 
                         // Chỉ khi lấy được invoice và có ID mới là thành công
                         if (invoice && invoice.id) {
+                        
+                        	if (invoice.invoice_pdf_url) {
+        invoice.invoice_pdf_url = String(invoice.invoice_pdf_url).replace("invoiceshelf:8080", "localhost:8002");
+    }
+                        	
                             var subTotalReal = parseFloat(invoice.sub_total || 0) / 100;
                             var totalReal = parseFloat(invoice.total || 0) / 100;
 
