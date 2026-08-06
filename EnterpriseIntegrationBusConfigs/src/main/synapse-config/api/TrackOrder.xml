@@ -2,6 +2,7 @@
 <api context="/api/v1/orders/track" name="TrackOrderAPI" xmlns="http://ws.apache.org/ns/synapse">
     <resource methods="POST" uri-template="/">
         <inSequence>
+            <sequence key="CORSFilterSequence"/>
             <header action="remove" name="Cookie" scope="transport"/>
             <header action="remove" name="Authorization" scope="transport"/>
             <property expression="get-property('env', 'WSO2_BASE_URL')" name="uri.var.wso2_url" scope="default" type="STRING"/>

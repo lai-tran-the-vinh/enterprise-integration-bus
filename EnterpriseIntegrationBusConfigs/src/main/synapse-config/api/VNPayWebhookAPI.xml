@@ -2,6 +2,9 @@
 <api context="/api/v1/webhook" name="VNPayWebhookAPI" xmlns="http://ws.apache.org/ns/synapse">
     <resource methods="GET" uri-template="/vnpay">
         <inSequence>
+            <!-- Trạng thái khác 0, đơn hàng đã được xử lý trước đó -->
+            <!-- Trạng thái = 0 (Dự thảo), cho phép luồng chạy tiếp xuống bên dưới -->
+            <!-- 1. Báo cho Dolibarr biết để cập nhật trạng thái đơn hàng thành Hủy (mã 9) -->
             <header action="remove" name="Cookie" scope="transport"/>
             <header action="remove" name="Authorization" scope="transport"/>
             <header name="Accept" scope="transport" value="application/json"/>
@@ -11,6 +14,38 @@
             <property expression="get-property('query.param.vnp_ResponseCode')" name="ResultCode" scope="default" type="STRING"/>
             <property expression="get-property('env', 'DOLIBARR_BASE_URL')" name="uri.var.dolibarr_url" scope="default" type="STRING"/>
             <property expression="get-property('env', 'INVOICE_SHELF_BASE_URL')" name="uri.var.invoice_shelf_url" scope="default" type="STRING"/>
+            <!-- CHỐT CHẶN: Kiểm tra trạng thái đơn hàng trước khi xử lý -->
+            <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
+            <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+            <call>
+                <endpoint>
+                    <http method="get" uri-template="{uri.var.dolibarr_url}/api/index.php/orders/{uri.var.orderid}">
+                        <suspendOnFailure>
+                            <initialDuration>-1</initialDuration>
+                            <progressionFactor>1</progressionFactor>
+                        </suspendOnFailure>
+                        <markForSuspension>
+                            <retriesBeforeSuspension>5</retriesBeforeSuspension>
+                        </markForSuspension>
+                    </http>
+                </endpoint>
+            </call>
+            <property expression="json-eval($.status)" name="CurrentOrderStatus" scope="default" type="STRING"/>
+            <!-- Nếu trạng thái khác 0 (nghĩa là đã duyệt hoặc đã hủy), chặn luồng và báo trùng -->
+            <filter regex="^0$" source="get-property('CurrentOrderStatus')">
+                <then/>
+                <else>
+                    <payloadFactory media-type="json">
+                        <format>
+			                {"RspCode": "02", "Message": "Order already handled"}
+			            </format>
+                        <args/>
+                    </payloadFactory>
+                    <property name="HTTP_SC" scope="axis2" type="STRING" value="200"/>
+                    <respond/>
+                </else>
+            </filter>
+            <!-- KẾT THÚC CHỐT CHẶN -->
             <filter regex="^00$" source="get-property('ResultCode')">
                 <then>
                     <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
@@ -327,10 +362,34 @@
                     <respond/>
                 </then>
                 <else>
+                    <header action="remove" name="Authorization" scope="transport"/>
+                    <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
                     <payloadFactory media-type="json">
                         <format>
-							{"RspCode": "02", "Message": "Order Failed"}
-						</format>
+				            { "status": -1 }
+				        </format>
+                        <args/>
+                    </payloadFactory>
+                    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
+                    <call>
+                        <endpoint>
+                            <http method="put" uri-template="{uri.var.dolibarr_url}/api/index.php/orders/{uri.var.orderid}">
+                                <suspendOnFailure>
+                                    <initialDuration>-1</initialDuration>
+                                    <progressionFactor>1</progressionFactor>
+                                </suspendOnFailure>
+                                <markForSuspension>
+                                    <retriesBeforeSuspension>5</retriesBeforeSuspension>
+                                </markForSuspension>
+                            </http>
+                        </endpoint>
+                    </call>
+                    <!-- 2. Trả phản hồi RspCode 02 về cho VNPay (Postman) như cũ -->
+                    <payloadFactory media-type="json">
+                        <format>
+				            {"RspCode": "02", "Message": "Order Failed"}
+				        </format>
                         <args/>
                     </payloadFactory>
                     <property name="HTTP_SC" scope="axis2" type="STRING" value="200"/>

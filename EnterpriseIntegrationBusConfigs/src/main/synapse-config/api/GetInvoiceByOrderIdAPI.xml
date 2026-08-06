@@ -2,6 +2,7 @@
 <api context="/api/v1/invoices" name="InvoiceDetailAPI" xmlns="http://ws.apache.org/ns/synapse">
     <resource methods="GET" uri-template="/{orderId}">
         <inSequence>
+            <sequence key="CORSFilterSequence"/>
             <property expression="fn:concat('Bearer ', get-property('env', 'INVOICE_SHELF_TOKEN'))" name="INVOICE_SHELF_TOKEN" scope="default" type="STRING"/>
             <!-- 1. Cấu hình Token Dolibarr -->
             <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
@@ -58,7 +59,6 @@
                             </http>
                         </endpoint>
                     </call>
-                    <log level="full"/>
                     <!-- 5. Kiểm tra kết quả từ InvoiceShelf -->
                     <filter regex="200" source="$axis2:HTTP_SC">
                         <then>

@@ -2,6 +2,7 @@
 <api context="/api/v1/orders" name="OrderAPI" xmlns="http://ws.apache.org/ns/synapse">
     <resource methods="POST" uri-template="/">
         <inSequence>
+            <sequence key="CORSFilterSequence"/>
             <property expression="json-eval($.customer_name)" name="CustomerName" scope="default" type="STRING"/>
             <property expression="json-eval($.customer_email)" name="CustomerEmail" scope="default" type="STRING"/>
             <property expression="json-eval($.amount)" name="OrderAmount" scope="default" type="STRING"/>
@@ -21,11 +22,11 @@
             <property expression="get-property('env', 'WSO2_BASE_URL')" name="uri.var.wso2_url" scope="default" type="STRING"/>
             <filter regex="^Bearer .+" source="get-property('AuthHeader')">
                 <then>
-                    <property expression="fn:substring-after(get-property('AuthHeader'), 'Bearer ')" name="BearerToken" scope="default" type="STRING"/>
+                    <property expression="fn:normalize-space(fn:substring-after(get-property('AuthHeader'), 'Bearer '))" name="BearerToken" scope="default" type="STRING"/>
                     <header action="remove" name="Authorization" scope="transport"/>
                     <payloadFactory media-type="xml">
                         <format>
-                            <xform>
+                            <xform xmlns="">
                                 <token>$1</token>
                                 <client_id>wso2-client</client_id>
                                 <client_secret>$2</client_secret>
@@ -42,7 +43,7 @@
                     <property name="messageType" scope="axis2" type="STRING" value="application/x-www-form-urlencoded"/>
                     <property name="DISABLE_CHUNKING" scope="axis2" type="STRING" value="true"/>
                     <property action="remove" name="REST_URL_POSTFIX" scope="axis2"/>
-                    <!-- <call>
+                    <call>
                         <endpoint>
                             <http method="post" uri-template="{uri.var.keycloak_url}/realms/WSO2-Realm/protocol/openid-connect/token/introspect">
                                 <suspendOnFailure>
@@ -54,14 +55,7 @@
                                 </markForSuspension>
                             </http>
                         </endpoint>
-                    </call> -->
-                    <!-- Tạm thời bỏ qua Keycloak, ép cứng kết quả trả về là active: true -->
-                    <payloadFactory media-type="json">
-                        <format>
-					        {"active": true}
-					    </format>
-                        <args/>
-                    </payloadFactory>
+                    </call>
                     <filter regex="true" source="json-eval($.active)">
                         <then>
                             <property expression="get-property('env', 'DOLIBARR_TOKEN')" name="DOLAPIKEY" scope="transport" type="STRING"/>
