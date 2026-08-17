@@ -2,6 +2,8 @@
 <api context="/api/v1/vnpay/return" name="VNPayReturnAPI" xmlns="http://ws.apache.org/ns/synapse">
     <resource methods="GET">
         <inSequence>
+            <!-- Nếu khác 00 (Thất bại / Khách hủy) -->
+            <!-- Nếu là 00 (Thanh toán thành công) -->
             <property expression="get-property('query.param.vnp_TxnRef')" name="uri.var.ref" scope="default" type="STRING"/>
             <property expression="get-property('query.param.vnp_ResponseCode')" name="uri.var.code" scope="default" type="STRING"/>
             <property action="remove" name="REST_URL_POSTFIX" scope="axis2"/>
@@ -24,8 +26,17 @@
                     </http>
                 </endpoint>
             </call>
+            <!-- Kiểm tra mã vnp_ResponseCode từ VNPay -->
+            <filter regex="00" source="get-property('uri.var.code')">
+                <then>
+                    <property name="FinalStatus" scope="default" type="STRING" value="success"/>
+                </then>
+                <else>
+                    <property name="FinalStatus" scope="default" type="STRING" value="failed"/>
+                </else>
+            </filter>
             <property name="HTTP_SC" scope="axis2" type="STRING" value="302"/>
-            <header expression="fn:concat(get-property('uri.var.express_app_url'), '/order-result?orderId=', get-property('uri.var.ref'), '&amp;status=success')" name="Location" scope="transport"/>
+            <header expression="fn:concat(get-property('uri.var.express_app_url'), '/order-result?orderId=', get-property('uri.var.ref'), '&amp;status=', get-property('FinalStatus'))" name="Location" scope="transport"/>
             <respond/>
         </inSequence>
         <outSequence/>

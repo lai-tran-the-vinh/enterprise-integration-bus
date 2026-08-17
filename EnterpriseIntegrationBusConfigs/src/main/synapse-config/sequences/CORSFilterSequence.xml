@@ -1,18 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sequence name="CORSFilterSequence" trace="disable" xmlns="http://ws.apache.org/ns/synapse">
-    <!-- So sánh trực tiếp Header Origin (gọi qua $trp) với Biến môi trường (gọi qua hàm get-property) -->
-    <filter xpath="$trp:Origin = get-property('env', 'EXPRESS_APP_BASE_URL')">
+    <!-- Kiểm tra nếu Header Origin tồn tại -->
+    <filter xpath="boolean($trp:Origin)">
         <then>
-            <property expression="get-property('env', 'EXPRESS_APP_BASE_URL')" name="Access-Control-Allow-Origin" scope="transport" type="STRING"/>
+            <filter xpath="$trp:Origin = get-property('env', 'EXPRESS_APP_BASE_URL')">
+                <then>
+                    <property expression="get-property('env', 'EXPRESS_APP_BASE_URL')" name="Access-Control-Allow-Origin" scope="transport" type="STRING"/>
+                </then>
+                <else>
+                    <property name="HTTP_SC" scope="axis2" type="STRING" value="403"/>
+                    <payloadFactory media-type="json">
+                        <format>{"error": "Bị chặn bởi chính sách CORS: Origin không hợp lệ."}</format>
+                        <args/>
+                    </payloadFactory>
+                    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+                    <respond/>
+                </else>
+            </filter>
         </then>
-        <else>
-            <property name="HTTP_SC" scope="axis2" type="STRING" value="403"/>
-            <payloadFactory media-type="json">
-                <format>{"error": "Bị chặn bởi chính sách CORS: Origin không hợp lệ."}</format>
-                <args/>
-            </payloadFactory>
-            <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
-            <respond/>
-        </else>
+        <else/>
     </filter>
 </sequence>
